@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dogear — Prototype</title>
+<style>
+  :root{
+    --ink:#16241D;
+    --forest:#1F3A2E;
+    --forest-light:#2C5040;
+    --linen:#EFE9D8;
+    --linen-dim:#E3DCC6;
+    --brass:#C08A3E;
+    --brass-light:#D9A85C;
+    --rust:#9B4B3A;
+    --text-dark:#1B2118;
+    --text-mute:#5B6459;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:#0B120D;
+    font-family:'Iowan Old Style','Georgia',serif;
+    display:flex;
+    justify-content:center;
+    padding:40px 16px;
+  }
+  .phone{
+    width:390px;
+    height:844px;
+    background:var(--ink);
+    border-radius:44px;
+    border:8px solid #05100A;
+    overflow:hidden;
+    position:relative;
+    box-shadow:0 30px 60px rgba(0,0,0,0.5);
+  }
+  .screen{
+    height:100%;
+    overflow-y:auto;
+    -ms-overflow-style:none;
+    scrollbar-width:none;
+    background:var(--linen);
+  }
+  .screen::-webkit-scrollbar{display:none;}
+  .statusbar{
+    height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 24px;
+    font-family:-apple-system,sans-serif;
+    font-size:13px;
+    font-weight:600;
+    color:var(--text-dark);
+    background:var(--linen);
+  }
+  header.hero{
+    background:var(--forest);
+    padding:8px 24px 28px;
+    color:var(--linen);
+    position:relative;
+  }
+  .eyebrow{
+    font-family:-apple-system,sans-serif;
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--brass-light);
+    margin:0 0 4px;
+  }
+  h1.title{
+    font-size:28px;
+    font-weight:400;
+    margin:0 0 2px;
+    font-style:italic;
+  }
+  .sub{
+    font-family:-apple-system,sans-serif;
+    font-size:13px;
+    color:#B9C7BC;
+    margin:0;
+  }
+  .dna-strip{
+    display:flex;
+    gap:6px;
+    margin-top:18px;
+  }
+  .dna-bar{
+    flex:1;
+    height:5px;
+    border-radius:3px;
+    background:rgba(255,255,255,0.15);
+    overflow:hidden;
+  }
+  .dna-bar i{display:block;height:100%;background:var(--brass-light);}
+  section{padding:22px 24px 4px;}
+  .section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:12px;
+  }
+  .section-head h2{
+    font-size:17px;
+    font-weight:600;
+    color:var(--text-dark);
+    margin:0;
+    font-style:italic;
+  }
+  .section-head a{
+    font-family:-apple-system,sans-serif;
+    font-size:12px;
+    color:var(--rust);
+    text-decoration:none;
+    font-weight:600;
+  }
+  .shelf{
+    display:flex;
+    gap:14px;
+    overflow-x:auto;
+    padding-bottom:8px;
+    scrollbar-width:none;
+  }
+  .shelf::-webkit-scrollbar{display:none;}
+  .book{
+    flex:0 0 auto;
+    width:104px;
+    cursor:pointer;
+  }
+  .cover{
+    width:104px;
+    height:150px;
+    border-radius:4px;
+    display:flex;
+    align-items:flex-end;
+    padding:10px;
+    font-family:-apple-system,sans-serif;
+    font-size:11px;
+    font-weight:700;
+    color:var(--linen);
+    line-height:1.25;
+    box-shadow:0 6px 14px rgba(0,0,0,0.18);
+  }
+  .book-title{
+    font-family:-apple-system,sans-serif;
+    font-size:12px;
+    font-weight:600;
+    color:var(--text-dark);
+    margin:8px 0 1px;
+  }
+  .book-why{
+    font-family:-apple-system,sans-serif;
+    font-size:10.5px;
+    color:var(--text-mute);
+    line-height:1.3;
+  }
+  .why-card{
+    background:#fff;
+    border:1px solid var(--linen-dim);
+    border-radius:12px;
+    padding:14px 16px;
+    margin:6px 0 4px;
+    font-family:-apple-system,sans-serif;
+    font-size:12.5px;
+    color:var(--text-mute);
+    line-height:1.5;
+  }
+  .why-card b{color:var(--text-dark);}
+  .archive-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:8px;
+  }
+  .spine{
+    height:64px;
+    border-radius:3px;
+  }
+  .quote-card{
+    background:var(--forest);
+    color:var(--linen);
+    border-radius:12px;
+    padding:18px 18px 16px;
+    font-style:italic;
+    font-size:14px;
+    line-height:1.5;
+    margin-bottom:6px;
+  }
+  .quote-card .attr{
+    font-family:-apple-system,sans-serif;
+    font-style:normal;
+    font-size:11px;
+    color:var(--brass-light);
+    margin-top:10px;
+  }
+  .tabbar{
+    position:absolute;
+    bottom:0;left:0;right:0;
+    height:78px;
+    background:rgba(239,233,216,0.97);
+    backdrop-filter:blur(6px);
+    border-top:1px solid var(--linen-dim);
+    display:flex;
+    padding-top:10px;
+  }
+  .tab{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    font-family:-apple-system,sans-serif;
+    font-size:10px;
+    color:var(--text-mute);
+    cursor:pointer;
+  }
+  .tab.active{color:var(--forest);font-weight:700;}
+  .tab .dot{width:20px;height:20px;border-radius:50%;background:var(--linen-dim);display:flex;align-items:center;justify-content:center;font-size:11px;}
+  .tab.active .dot{background:var(--forest);color:var(--linen);}
+  .modal-bg{
+    position:absolute;inset:0;
+    background:rgba(10,15,11,0.55);
+    display:none;
+    align-items:flex-end;
+    z-index:10;
+  }
+  .modal-bg.show{display:flex;}
+  .modal{
+    background:var(--linen);
+    width:100%;
+    border-radius:20px 20px 0 0;
+    padding:22px 24px 30px;
+    font-family:-apple-system,sans-serif;
+  }
+  .modal-cover{
+    width:70px;height:100px;border-radius:4px;
+    display:inline-block;vertical-align:top;
+    margin-right:14px;
+  }
+  .modal-head{display:flex;margin-bottom:14px;}
+  .modal-close{
+    position:absolute;top:14px;right:20px;
+    color:var(--text-mute);font-size:13px;cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="screen" id="screen">
+    <div class="statusbar"><span>9:41</span><span>●●●●  📶  🔋</span></div>
+
+    <header class="hero">
+      <p class="eyebrow">Dogear</p>
+      <h1 class="title">Good evening, Walker</h1>
+      <p class="sub">Your shelf shifted overnight — 4 new picks in.</p>
+      <div class="dna-strip">
+        <div class="dna-bar"><i style="width:82%"></i></div>
+        <div class="dna-bar"><i style="width:55%"></i></div>
+        <div class="dna-bar"><i style="width:70%"></i></div>
+        <div class="dna-bar"><i style="width:38%"></i></div>
+      </div>
+    </header>
+
+    <section>
+      <div class="section-head"><h2>For you tonight</h2><a href="#">Refresh</a></div>
+      <div class="shelf">
+        <div class="book" onclick="openModal('atlas')">
+          <div class="cover" style="background:#5C3A21">Atlas of<br>Lost Rooms</div>
+          <div class="book-title">Atlas of Lost Rooms</div>
+          <div class="book-why">Matches your Bon Iver mood</div>
+        </div>
+        <div class="book" onclick="openModal('current')">
+          <div class="cover" style="background:#2C5040">The Long<br>Current</div>
+          <div class="book-title">The Long Current</div>
+          <div class="book-why">Coastal, slow-burn like Fleetwood Mac</div>
+        </div>
+        <div class="book" onclick="openModal('quiet')">
+          <div class="cover" style="background:#9B4B3A">A Quiet<br>Acquisition</div>
+          <div class="book-title">A Quiet Acquisition</div>
+          <div class="book-why">Business memoir, family stakes</div>
+        </div>
+        <div class="book" onclick="openModal('field')">
+          <div class="cover" style="background:#3A3F5C">Field<br>Notes</div>
+          <div class="book-title">Field Notes on Growth</div>
+          <div class="book-why">Short, operator-voiced</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Why these picked you</h2></div>
+      <div class="why-card">
+        <b>The Long Current</b> showed up because your last four 5-star reads shared a slow, atmospheric pace and coastal or water imagery — same texture as the records you've been playing.
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Your archive</h2><a href="#">128 books</a></div>
+      <div class="archive-grid">
+        <div class="spine" style="background:#5C3A21"></div>
+        <div class="spine" style="background:#2C5040"></div>
+        <div class="spine" style="background:#9B4B3A"></div>
+        <div class="spine" style="background:#3A3F5C"></div>
+        <div class="spine" style="background:#C08A3E"></div>
+        <div class="spine" style="background:#1F3A2E"></div>
+        <div class="spine" style="background:#5C3A21"></div>
+        <div class="spine" style="background:#9B4B3A"></div>
+        <div class="spine" style="background:#3A3F5C"></div>
+        <div class="spine" style="background:#2C5040"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Quote vault</h2></div>
+      <div class="quote-card">
+        "He kept returning to the idea that ownership was just attention, sustained long enough to become responsibility."
+        <div class="attr">A Quiet Acquisition · highlighted 3 days ago</div>
+      </div>
+    </section>
+
+    <div style="height:100px;"></div>
+  </div>
+
+  <div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+    <div class="modal">
+      <div class="modal-close" onclick="closeModal(event)">Close</div>
+      <div class="modal-head">
+        <div class="modal-cover" id="modalCover" style="background:#2C5040;"></div>
+        <div>
+          <div style="font-family:'Iowan Old Style',Georgia,serif;font-style:italic;font-size:17px;color:var(--text-dark);" id="modalTitle">The Long Current</div>
+          <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">Fiction · 312 pages · ~6 hr</div>
+          <div style="margin-top:8px;"><button style="background:var(--forest);color:var(--linen);border:none;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;">Add to shelf</button></div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text-mute);line-height:1.55;" id="modalWhy">
+        Slow-burn pacing, coastal setting, close third person. AI matched this to your recent 5-star pattern and current listening.
+      </div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab active"><div class="dot">◆</div>Today</div>
+    <div class="tab"><div class="dot">▤</div>Archive</div>
+    <div class="tab"><div class="dot">✎</div>Vault</div>
+    <div class="tab"><div class="dot">◐</div>DNA</div>
+    <div class="tab"><div class="dot">○</div>Profile</div>
+  </div>
+</div>
+
+<script>
+const data = {
+  atlas:{title:"Atlas of Lost Rooms", color:"#5C3A21", why:"Fragmented, dreamlike structure — matched to your late-night reading window and Bon Iver listening pattern."},
+  current:{title:"The Long Current", color:"#2C5040", why:"Slow-burn pacing, coastal setting, close third person. AI matched this to your recent 5-star pattern and current listening."},
+  quiet:{title:"A Quiet Acquisition", color:"#9B4B3A", why:"Family business succession themes — flagged because of your saved articles on founder transitions."},
+  field:{title:"Field Notes on Growth", color:"#3A3F5C", why:"Short chapters, operator voice — good fit for your commute-length reading sessions."}
+};
+function openModal(key){
+  const d = data[key];
+  document.getElementById('modalTitle').innerText = d.title;
+  document.getElementById('modalCover').style.background = d.color;
+  document.getElementById('modalWhy').innerText = d.why;
+  document.getElementById('modalBg').classList.add('show');
+}
+function closeModal(e){
+  if(e.target.id==='modalBg' || e.target.className==='modal-close'){
+    document.getElementById('modalBg').classList.remove('show');
+  }
+}
+</script>
+</body>
+</html>
