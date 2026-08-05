@@ -141,6 +141,48 @@ async function generateRow(assignment, historyText) {
   };
 }
 
+// A row can come back short or empty when the exclusion list is large and
+// the reader's profile is narrow — an independent per-row call, not knowing
+// what the other two rows are already covering, can be overly conservative
+// about what still counts as "the same pattern" once the obvious picks are
+// excluded. This is the actual cause (not a dedup bug — verified by checking
+// that empty final rows already had zero books before dedup ever runs).
+const MIN_BOOKS_PER_ROW = 4;
+
+const BROADEN_RETRY_HINT = `
+
+RETRY NOTE: Your first attempt for this row returned too few books, most likely because
+the exclusion list is large. For this attempt, allow slightly broader matches within the
+same overall taste pattern — related subgenres, adjacent authors, a looser reading of
+what counts as "the same pattern" — rather than returning few or no books. The hard
+exclusions do not change: still never recommend anything in read_history or shown_books.
+Only how broadly you interpret the pattern itself should loosen. Return 4-6 books.`;
+
+async function generateRowWithRetry(assignment, historyText) {
+  const first = await generateRow(assignment, historyText);
+  if (first.recommendations.length >= MIN_BOOKS_PER_ROW) {
+    return first;
+  }
+
+  console.log(
+    `Row (${assignment.kind}) returned ${first.recommendations.length} books on the ` +
+    `first attempt, retrying with a broadened prompt`
+  );
+  try {
+    const retryAssignment = {
+      ...assignment,
+      instruction: assignment.instruction + BROADEN_RETRY_HINT,
+    };
+    const retry = await generateRow(retryAssignment, historyText);
+    // Keep whichever attempt did better — the retry is meant to recover, not
+    // to unconditionally replace a first attempt that was already fine.
+    return retry.recommendations.length > first.recommendations.length ? retry : first;
+  } catch (err) {
+    console.error(`Retry for row (${assignment.kind}) failed:`, err?.message);
+    return first;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
@@ -174,9 +216,10 @@ export default async function handler(req, res) {
     // one call generating the whole taxonomy. Promise.allSettled so one
     // row's call failing (parse error, API hiccup) doesn't take the other
     // two down with it; we return whatever succeeded rather than 500ing the
-    // whole feed over one row.
+    // whole feed over one row. Each call retries itself once (see
+    // generateRowWithRetry) if it comes back short or empty.
     const settled = await Promise.allSettled(
-      ROW_ASSIGNMENTS.map((assignment) => generateRow(assignment, historyText))
+      ROW_ASSIGNMENTS.map((assignment) => generateRowWithRetry(assignment, historyText))
     );
 
     const successfulRows = [];

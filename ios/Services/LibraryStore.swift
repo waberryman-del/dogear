@@ -8,6 +8,10 @@ final class LibraryStore: ObservableObject {
     @Published var recommendationRows: [RecommendationRow] = []
     @Published var isRefreshingRecs = false
     @Published var recommendationsLoadFailed = false
+    /// True once a Today load has actually completed (success or failure) —
+    /// lets the UI tell "haven't tried yet" apart from "tried and genuinely
+    /// got nothing back," so it never shows the wrong empty-state message.
+    @Published private(set) var hasAttemptedTodayLoad = false
     @Published var onboardingGenres: Set<Genre> = []   // set once, during onboarding
     @Published private(set) var hasCompletedOnboarding: Bool
 
@@ -151,7 +155,10 @@ final class LibraryStore: ObservableObject {
 
     private func performRefresh(blocking: Bool) async {
         if blocking { isRefreshingRecs = true }
-        defer { if blocking { isRefreshingRecs = false } }
+        defer {
+            if blocking { isRefreshingRecs = false }
+            hasAttemptedTodayLoad = true
+        }
         do {
             let rows = try await recEngine.nextPicks(
                 basedOn: entries,

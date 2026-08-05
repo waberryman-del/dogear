@@ -39,6 +39,19 @@ struct TodayView: View {
             ErrorStateView(message: "Couldn't reach your library's brain.") {
                 Task { await library.loadTodayFeedIfNeeded() }
             }
+        } else if library.recommendationRows.isEmpty {
+            // A completed, non-failed load that still came back empty — the
+            // reader's profile is narrow enough (or heavily enough excluded
+            // via shown-book history) that recommend.js genuinely had nothing
+            // left to offer even after its own retry. Never leave this blank
+            // (CLAUDE.md: "never a blank screen"); before the load has even
+            // finished once, fall back to the loading state instead of
+            // flashing this message prematurely.
+            if library.hasAttemptedTodayLoad {
+                exhaustedState
+            } else {
+                LoadingStateView(message: "Finding your next reads…")
+            }
         } else {
             VStack(alignment: .leading, spacing: DogearSpacing.space6) {
                 ForEach(library.recommendationRows) { row in
@@ -48,6 +61,14 @@ struct TodayView: View {
                 }
             }
         }
+    }
+
+    private var exhaustedState: some View {
+        Text("You've read deep into this pattern. Try Vibe Search for something different.")
+            .font(DogearType.bodySmall)
+            .foregroundStyle(DogearColor.mutedInk)
+            .padding(.horizontal, DogearSpacing.space5)
+            .padding(.vertical, DogearSpacing.space8)
     }
 
     private var header: some View {
