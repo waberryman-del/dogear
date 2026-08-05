@@ -10,8 +10,8 @@ struct RecommendationEngine {
 
     // Fill in after Vercel deploy. Same value as APP_SHARED_SECRET in Vercel env vars —
     // fine to hardcode here since it's only an abuse guard, not real auth (see CLAUDE.md).
-    private let baseURL = URL(string: "https://your-app.vercel.app/api")!
-    private let sharedSecret = "REPLACE_WITH_YOUR_APP_SHARED_SECRET"
+    private let baseURL = URL(string: "https://dogear-teal.vercel.app/api")!
+    private let sharedSecret = "dogear12345"
 
     private func makeRequest(path: String, body: [String: Any]) throws -> URLRequest {
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
