@@ -182,16 +182,14 @@ export default async function handler(req, res) {
       recommendations: rowBuckets[i],
     }));
 
-    // Standard Server-Timing header — doesn't touch the JSON contract, just
-    // makes the claude-vs-lookup split inspectable (curl -i / browser
-    // devtools / Vercel logs) without guessing where latency goes.
-    res.setHeader(
-      "Server-Timing",
-      `claude;dur=${claudeMs}, lookup;dur=${lookupMs}, books;desc="${flat.length}"`
-    );
     console.log(`recommend timing: claude=${claudeMs}ms lookup=${lookupMs}ms books=${flat.length}`);
 
-    return res.status(200).json({ rows });
+    // Temporary diagnostic field (not part of the real contract, iOS ignores
+    // unknown keys) — Server-Timing headers were getting stripped somewhere
+    // in Vercel's response pipeline, so putting the claude-vs-lookup split
+    // directly in the body is the only way to actually see it from outside.
+    // Remove once the latency investigation is done.
+    return res.status(200).json({ rows, _timing: { claudeMs, lookupMs, books: flat.length } });
   } catch (err) {
     console.error("recommend error:", err);
     return res.status(500).json({ error: "recommendation failed" });
