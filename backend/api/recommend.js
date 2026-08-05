@@ -108,13 +108,27 @@ export default async function handler(req, res) {
   try {
     const msg = await anthropic.messages.create({
       model: "claude-sonnet-5",
-      max_tokens: 2500,
+      // Rows can run up to 3 taste rows + 1 discovery row x 6 books each, and
+      // with real read_history the per-book "reason" text runs longer than
+      // the old flat 6-book response ever needed — 2500 was measured to
+      // truncate mid-JSON on exactly this input shape (2+ distinct taste
+      // patterns), producing an unparseable response and a 500. 4096 gives
+      // real headroom over the realistic worst case.
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: historyText }],
     });
 
     const raw = msg.content.find((b) => b.type === "text")?.text ?? "{}";
-    const parsed = JSON.parse(raw);
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (parseErr) {
+      // Log the raw text so a future truncation/format issue is diagnosable
+      // from Vercel logs instead of showing up only as a generic 500.
+      console.error("Failed to parse Claude response as JSON:", parseErr.message, "raw:", raw);
+      throw parseErr;
+    }
 
     const rows = [];
     for (const row of parsed.rows ?? []) {

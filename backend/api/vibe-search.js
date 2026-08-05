@@ -125,7 +125,13 @@ export default async function handler(req, res) {
     });
 
     const raw = msg.content.find((b) => b.type === "text")?.text ?? "{}";
-    const parsed = JSON.parse(raw);
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (parseErr) {
+      console.error("Failed to parse Claude response as JSON:", parseErr.message, "raw:", raw);
+      throw parseErr;
+    }
 
     const enriched = [];
     for (const rec of parsed.results ?? []) {
