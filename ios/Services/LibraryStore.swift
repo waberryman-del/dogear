@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftUI
 
 @MainActor
 final class LibraryStore: ObservableObject {
@@ -20,6 +21,7 @@ final class LibraryStore: ObservableObject {
     private let hasOnboardedKey = "dogear.hasCompletedOnboarding"
     private let onboardingGenresKey = "dogear.onboardingGenres"
     private let shownBooksKey = "dogear.shownBooks"
+    private let recommendationRowsKey = "dogear.recommendationRows"
 
     init() {
         hasCompletedOnboarding = defaults.bool(forKey: hasOnboardedKey)
@@ -29,6 +31,13 @@ final class LibraryStore: ObservableObject {
         if let data = defaults.data(forKey: shownBooksKey),
            let decoded = try? JSONDecoder().decode([ShownBookRecord].self, from: data) {
             shownBooks = decoded
+        }
+        // Show last session's picks immediately on launch instead of a blank
+        // loading screen every time — loadTodayFeedIfNeeded() refreshes them
+        // in the background once Today appears.
+        if let data = defaults.data(forKey: recommendationRowsKey),
+           let decoded = try? JSONDecoder().decode([RecommendationRow].self, from: data) {
+            recommendationRows = decoded
         }
     }
 
@@ -121,19 +130,28 @@ final class LibraryStore: ObservableObject {
 
     /// Today has no manual refresh control (decision #4, amended) — new picks
     /// are earned only by shelving a book (`placeOnShelf`), which calls
-    /// `refreshRecommendations()` directly. This is just the cold-start/retry
-    /// path: recommendations aren't persisted across launches yet (pending the
-    /// Phase 3 SwiftData migration), so Today needs a way to populate itself
-    /// the first time it appears, and to recover after a failed load — neither
-    /// of which is a "refresh" in the earned sense, just filling an empty feed.
+    /// `refreshRecommendations()` directly. This is the cold-start/retry path,
+    /// called each time Today appears. If a cached batch from last session is
+    /// already showing (see `init()`), this refreshes it silently in the
+    /// background rather than blocking the UI on a fresh network call — the
+    /// reader sees something immediately and it updates underneath them. Only
+    /// blocks with a loading state when there's truly nothing cached to show.
     func loadTodayFeedIfNeeded() async {
-        guard recommendationRows.isEmpty, !isRefreshingRecs else { return }
-        await refreshRecommendations()
+        guard !isRefreshingRecs else { return }
+        if recommendationRows.isEmpty {
+            await refreshRecommendations()
+        } else {
+            await performRefresh(blocking: false)
+        }
     }
 
     private func refreshRecommendations() async {
-        isRefreshingRecs = true
-        defer { isRefreshingRecs = false }
+        await performRefresh(blocking: true)
+    }
+
+    private func performRefresh(blocking: Bool) async {
+        if blocking { isRefreshingRecs = true }
+        defer { if blocking { isRefreshingRecs = false } }
         do {
             let rows = try await recEngine.nextPicks(
                 basedOn: entries,
@@ -141,14 +159,27 @@ final class LibraryStore: ObservableObject {
                 shownBooks: shownBooks
             )
             let filtered = filterAlreadyShown(rows)
-            recommendationRows = filtered
+            withAnimation(DogearMotion.standard) {
+                recommendationRows = filtered
+            }
             recordShown(filtered.flatMap { $0.recommendations }.map { $0.book })
             recommendationsLoadFailed = false
+            persistRecommendationRows()
         } catch {
             // Leave any existing rows on screen — a failed refresh should
-            // never blank out picks the reader already saw. The retry state lives
-            // alongside them instead.
-            recommendationsLoadFailed = true
+            // never blank out picks the reader already saw. Only surface the
+            // retry state when there was nothing on screen to begin with; a
+            // silent background refresh failing shouldn't flag already-good
+            // cached content as broken.
+            if recommendationRows.isEmpty {
+                recommendationsLoadFailed = true
+            }
+        }
+    }
+
+    private func persistRecommendationRows() {
+        if let data = try? JSONEncoder().encode(recommendationRows) {
+            defaults.set(data, forKey: recommendationRowsKey)
         }
     }
 

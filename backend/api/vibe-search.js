@@ -16,6 +16,24 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// See recommend.js for the fuller rationale — bounded concurrency instead of
+// blasting Google Books with every lookup at once or running them serially.
+const LOOKUP_CONCURRENCY = 5;
+
+async function mapWithConcurrency(items, limit, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < items.length) {
+      const current = nextIndex++;
+      results[current] = await mapper(items[current], current);
+    }
+  }
+  const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
+  await Promise.all(workers);
+  return results;
+}
+
 const SYSTEM_PROMPT = `You are the vibe search engine for Dogear, a reading app. The
 reader types free text — a mood, a sentence, a feeling, a comparison to music or
 weather or a memory, not a genre or a structured query. Read past the literal words
@@ -133,16 +151,15 @@ export default async function handler(req, res) {
       throw parseErr;
     }
 
-    const enriched = [];
-    for (const rec of parsed.results ?? []) {
-      const book = await safeLookupBook(rec.title, rec.author);
-      enriched.push({
-        book,
+    const enriched = await mapWithConcurrency(
+      parsed.results ?? [],
+      LOOKUP_CONCURRENCY,
+      async (rec) => ({
+        book: await safeLookupBook(rec.title, rec.author),
         reason: rec.reason,
         confidence: rec.confidence ?? 0.5,
-      });
-      await new Promise((r) => setTimeout(r, 150));
-    }
+      })
+    );
 
     return res.status(200).json({
       results: enriched,

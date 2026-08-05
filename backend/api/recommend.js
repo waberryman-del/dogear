@@ -9,6 +9,26 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// How many book-metadata lookups run at once. Bounded rather than unlimited
+// so we don't blast Google Books with 15-24 simultaneous requests and invite
+// rate-limiting — 5 is enough to turn ~20-30s of serial lookups into a few
+// seconds without leaning on it too hard.
+const LOOKUP_CONCURRENCY = 5;
+
+async function mapWithConcurrency(items, limit, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < items.length) {
+      const current = nextIndex++;
+      results[current] = await mapper(items[current], current);
+    }
+  }
+  const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
+  await Promise.all(workers);
+  return results;
+}
+
 const SYSTEM_PROMPT = `You are the recommendation engine for Dogear, a reading app.
 Given a reader's onboarding genre picks, finished-book history, and any books currently
 in progress, organize their next reads into a small set of labeled rows for the Today
@@ -130,24 +150,33 @@ export default async function handler(req, res) {
       throw parseErr;
     }
 
-    const rows = [];
-    for (const row of parsed.rows ?? []) {
-      const enrichedBooks = [];
-      for (const rec of row.recommendations ?? []) {
-        const book = await safeLookupBook(rec.title, rec.author);
-        enrichedBooks.push({
-          book,
-          reason: rec.reason,
-          confidence: rec.confidence ?? 0.5,
-        });
-        await new Promise((r) => setTimeout(r, 150));
-      }
-      rows.push({
-        label: row.label,
-        kind: row.kind === "discovery" ? "discovery" : "taste",
-        recommendations: enrichedBooks,
+    // Flatten every book across every row into one list so lookups run with
+    // bounded concurrency across the whole response, not serially row by row
+    // (rows can total 15-24 books; serial lookups at ~1-2s each were most of
+    // this endpoint's latency). Row/position is preserved via rowIndex so the
+    // response can be reassembled in the same order the model returned.
+    const flat = [];
+    (parsed.rows ?? []).forEach((row, rowIndex) => {
+      (row.recommendations ?? []).forEach((rec) => {
+        flat.push({ rowIndex, rec });
       });
-    }
+    });
+
+    const enrichedFlat = await mapWithConcurrency(flat, LOOKUP_CONCURRENCY, async ({ rec }) => {
+      const book = await safeLookupBook(rec.title, rec.author);
+      return { book, reason: rec.reason, confidence: rec.confidence ?? 0.5 };
+    });
+
+    const rowBuckets = (parsed.rows ?? []).map(() => []);
+    enrichedFlat.forEach((enriched, i) => {
+      rowBuckets[flat[i].rowIndex].push(enriched);
+    });
+
+    const rows = (parsed.rows ?? []).map((row, i) => ({
+      label: row.label,
+      kind: row.kind === "discovery" ? "discovery" : "taste",
+      recommendations: rowBuckets[i],
+    }));
 
     return res.status(200).json({ rows });
   } catch (err) {
