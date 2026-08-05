@@ -20,7 +20,7 @@ struct TodayView: View {
             .toolbar(.hidden, for: .navigationBar)
             .task { await library.ringTheBell() }
             .sheet(item: $selectedRecommendation) { rec in
-                BookDetailView(recommendation: rec)
+                BookDetailView(book: rec.book, reason: rec.reason)
                     .environmentObject(library)
             }
         }

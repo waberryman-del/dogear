@@ -5,6 +5,7 @@ import SwiftUI
 /// that's a later pass once shelf placement (finishing a book) is wired up.
 struct MyShelfView: View {
     @EnvironmentObject var library: LibraryStore
+    @State private var selectedEntry: LibraryEntry?
     private let columns = [GridItem(.adaptive(minimum: 100), spacing: 14)]
 
     var body: some View {
@@ -15,6 +16,7 @@ struct MyShelfView: View {
                 LazyVGrid(columns: columns, spacing: 20) {
                     ForEach(library.entries) { entry in
                         ShelfEntryCard(entry: entry)
+                            .onTapGesture { selectedEntry = entry }
                     }
                 }
                 .padding()
@@ -22,6 +24,10 @@ struct MyShelfView: View {
         }
         .background(Color("Linen"))
         .navigationTitle("My shelf")
+        .sheet(item: $selectedEntry) { entry in
+            BookDetailView(book: entry.book)
+                .environmentObject(library)
+        }
     }
 
     private var emptyState: some View {
