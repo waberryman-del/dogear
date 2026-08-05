@@ -53,9 +53,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "POST only" });
   }
 
-  // Cheap abuse guard: the iOS app sends this header with a value baked in at build
-  // time (not a real secret, just enough to stop randoms from finding the URL and
-  // burning your Anthropic credits). Set APP_SHARED_SECRET in Vercel env vars.
   if (req.headers["x-app-secret"] !== process.env.APP_SHARED_SECRET) {
     return res.status(401).json({ error: "unauthorized" });
   }
@@ -65,7 +62,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "read_history must be an array" });
   }
 
-  // Cold start / empty library: fall back to onboarding genres instead of generic picks.
   const historyText = read_history.length
     ? JSON.stringify({ read_history, currently_reading: currently_reading ?? [] }, null, 2)
     : JSON.stringify({
@@ -85,17 +81,16 @@ export default async function handler(req, res) {
     const raw = msg.content.find((b) => b.type === "text")?.text ?? "{}";
     const parsed = JSON.parse(raw);
 
-    // Enrich with real cover/metadata from Google Books (no key needed for basic search).
-    const enriched = await Promise.all(
-      (parsed.recommendations ?? []).map(async (rec) => {
-        const book = await lookupBook(rec.title, rec.author);
-        return {
-          book,
-          reason: rec.reason,
-          confidence: rec.confidence ?? 0.5,
-        };
-      })
-    );
+    const enriched = [];
+    for (const rec of parsed.recommendations ?? []) {
+      const book = await lookupBook(rec.title, rec.author);
+      enriched.push({
+        book,
+        reason: rec.reason,
+        confidence: rec.confidence ?? 0.5,
+      });
+      await new Promise((r) => setTimeout(r, 250));
+    }
 
     return res.status(200).json({ recommendations: enriched });
   } catch (err) {
@@ -105,16 +100,18 @@ export default async function handler(req, res) {
 }
 
 async function lookupBook(title, author) {
-  const q = encodeURIComponent(`intitle:${title} inauthor:${author}`);
   const key = process.env.GOOGLE_BOOKS_API_KEY;
   const keyParam = key ? `&key=${key}` : "";
-  const resp = await fetch(
-    `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${keyParam}`
-  );
-  const data = await resp.json();
-  const item = data.items?.[0];
-  const info = item?.volumeInfo;
 
+  let item = await tryGoogleBooksQuery(
+    `intitle:${title} inauthor:${author}`,
+    keyParam
+  );
+  if (!item) {
+    item = await tryGoogleBooksQuery(`${title} ${author}`, keyParam);
+  }
+
+  const info = item?.volumeInfo;
   return {
     id: item?.id ?? `${title}-${author}`.replace(/\s+/g, "-").toLowerCase(),
     title: info?.title ?? title,
@@ -124,4 +121,13 @@ async function lookupBook(title, author) {
     genres: info?.categories ?? [],
     summary: info?.description ?? null,
   };
+}
+
+async function tryGoogleBooksQuery(query, keyParam) {
+  const q = encodeURIComponent(query);
+  const resp = await fetch(
+    `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${keyParam}`
+  );
+  const data = await resp.json();
+  return data.items?.[0] ?? null;
 }
