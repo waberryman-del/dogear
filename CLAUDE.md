@@ -155,7 +155,36 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
 16. **Do not begin Phase 3 work** (shelf placement, SwiftData persistence
     migration, midpoint check-in, fold gesture) during this Vibe Search /
     design-system pass, even if it looks like a small, related change.
-
+17. **[Phase 3 opening] Today (home) is being redesigned around a "Currently
+    Reading" hero status card**, not just a flat recommendation feed. The
+    hero card shows cover, title, author, page progress, and (if set) a
+    reading goal with a pace indicator. If nothing is currently being read,
+    the card invites starting something from the shelf or recommendations —
+    never a blank space.
+18. **Reading goals are: a target page count + a target date**, set/edited
+    from the hero card. Progress is updated via simple manual page-number
+    entry/stepper — no quick-add buttons, no slider. The app computes a pace
+    indicator (on track / behind) from current page vs. the goal's timeline.
+19. **Below the hero card, recommendations render as AI-personalized
+    horizontal-scroll rows**, replacing the flat grid. Rows are dynamically
+    generated and specific to the reader — not fixed genre buckets. Mix of
+    taste-anchored rows (grounded in specific books/patterns from real
+    history, with honest, specific titles — "Because you loved Beloved," not
+    "More Fiction") and at least one explicit discovery/stretch row that
+    intentionally introduces something adjacent-but-new, framed as such.
+20. **These rows reuse the existing recommendation engine**, not a parallel
+    system — same shown-book exclusion (decision 8), recency-weighting
+    (decision 9), and taste-blending (decision 10) already built. This is an
+    extension of `recommend.js`'s logic, not a new, separately-reasoned
+    feature.
+21. **Reliability**: backend book-metadata lookups (Google Books → Open
+    Library fallback) must not let one book's failure take down the whole
+    recommendation/vibe-search response — wrap per-book lookups so a single
+    failure degrades gracefully (missing cover, not a failed request).
+    Function timeouts should be generous enough to cover Claude's response
+    time plus metadata lookups with retries, since users have hit
+    intermittent "couldn't reach your library's brain" failures that are
+    most likely timeout-related, not hard errors.
 ## Design identity
 - **Palette**: unchanged from the earlier prototype and still the right call — deep
   forest `#1F3A2E`, ink `#16241D`, linen `#EFE9D8`, brass `#C08A3E`, rust `#9B4B3A`.
