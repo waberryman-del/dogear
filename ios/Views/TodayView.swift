@@ -1,8 +1,12 @@
 import SwiftUI
 
-/// Pure, automatically-updating recommendation feed (decision #4, amended) —
-/// no manual refresh control and no Vibe Search entry point here anymore;
-/// "Find" is its own tab now (decision #11, amended).
+/// Phase 3 opening (decisions #17-20): anchored by a "Currently Reading" hero
+/// card rather than a flat feed. Recommendations render as labeled,
+/// horizontally-scrolling rows below it — each row carries its own specific
+/// label now, so the old generic "For you tonight" section header is gone;
+/// it would just be redundant noise above rows that already say why they're
+/// there. No manual refresh control and no Vibe Search entry point here;
+/// "Find" is its own tab (decision #11, amended).
 struct TodayView: View {
     @EnvironmentObject var library: LibraryStore
     @State private var selectedRecommendation: Recommendation?
@@ -10,9 +14,9 @@ struct TodayView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: DogearSpacing.space6) {
+                VStack(alignment: .leading, spacing: DogearSpacing.space8) {
                     header
-                    sectionHeader("For you tonight")
+                    HeroReadingCard()
                     content
                 }
                 .padding(.vertical, DogearSpacing.space6)
@@ -29,15 +33,19 @@ struct TodayView: View {
 
     @ViewBuilder
     private var content: some View {
-        if library.isRefreshingRecs && library.recommendations.isEmpty {
+        if library.isRefreshingRecs && library.recommendationRows.isEmpty {
             LoadingStateView(message: "Finding your next reads…")
-        } else if library.recommendationsLoadFailed && library.recommendations.isEmpty {
+        } else if library.recommendationsLoadFailed && library.recommendationRows.isEmpty {
             ErrorStateView(message: "Couldn't reach your library's brain.") {
                 Task { await library.loadTodayFeedIfNeeded() }
             }
         } else {
-            RecommendationGrid(recommendations: library.recommendations) { rec in
-                selectedRecommendation = rec
+            VStack(alignment: .leading, spacing: DogearSpacing.space6) {
+                ForEach(library.recommendationRows) { row in
+                    RecommendationRowView(row: row) { rec in
+                        selectedRecommendation = rec
+                    }
+                }
             }
         }
     }
@@ -73,12 +81,5 @@ struct TodayView: View {
         case 12..<17: return "Good afternoon"
         default: return "Good evening"
         }
-    }
-
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title)
-            .font(DogearType.title.italic())
-            .foregroundStyle(DogearColor.ink)
-            .padding(.horizontal, DogearSpacing.space5)
     }
 }

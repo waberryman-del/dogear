@@ -129,13 +129,13 @@ export default async function handler(req, res) {
 
     const enriched = [];
     for (const rec of parsed.results ?? []) {
-      const book = await lookupBook(rec.title, rec.author);
+      const book = await safeLookupBook(rec.title, rec.author);
       enriched.push({
         book,
         reason: rec.reason,
         confidence: rec.confidence ?? 0.5,
       });
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, 150));
     }
 
     return res.status(200).json({
@@ -145,6 +145,26 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error("vibe-search error:", err);
     return res.status(500).json({ error: "vibe search failed" });
+  }
+}
+
+// Decision #21 reliability fix: a single book's metadata lookup failing must
+// never take down the whole vibe search response — see recommend.js for the
+// same wrapper and the fuller rationale.
+async function safeLookupBook(title, author) {
+  try {
+    return await lookupBook(title, author);
+  } catch (err) {
+    console.error("lookupBook failed unexpectedly, using bare fallback:", title, author, err?.message);
+    return {
+      id: `${title}-${author}`.replace(/\s+/g, "-").toLowerCase(),
+      title,
+      author,
+      coverURL: null,
+      pageCount: null,
+      genres: [],
+      summary: null,
+    };
   }
 }
 
@@ -213,13 +233,26 @@ async function lookupOpenLibrary(title, author) {
   }
 }
 
-async function tryGoogleBooksQuery(query, keyParam) {
+// Wrapped + retried per decision #21 — previously an unguarded fetch here
+// could throw and propagate all the way out of the per-book loop, failing
+// the entire vibe search over a single flaky Google Books call.
+async function tryGoogleBooksQuery(query, keyParam, attempt = 0) {
   const q = encodeURIComponent(query);
   const url = `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${keyParam}`;
-  const resp = await fetch(url);
-  const data = await resp.json();
-  if (data.error) {
-    console.error("Google Books error for query:", query, JSON.stringify(data.error));
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.error) {
+      console.error("Google Books error for query:", query, JSON.stringify(data.error));
+      return null;
+    }
+    return data.items?.[0] ?? null;
+  } catch (err) {
+    if (attempt === 0) {
+      console.error("Google Books fetch failed, retrying once:", query, err?.message);
+      return tryGoogleBooksQuery(query, keyParam, attempt + 1);
+    }
+    console.error("Google Books fetch failed after retry, falling back:", query, err?.message);
+    return null;
   }
-  return data.items?.[0] ?? null;
 }

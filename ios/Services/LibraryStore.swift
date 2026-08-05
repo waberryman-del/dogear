@@ -4,7 +4,7 @@ import Combine
 @MainActor
 final class LibraryStore: ObservableObject {
     @Published var entries: [LibraryEntry] = []
-    @Published var recommendations: [Recommendation] = []
+    @Published var recommendationRows: [RecommendationRow] = []
     @Published var isRefreshingRecs = false
     @Published var recommendationsLoadFailed = false
     @Published var onboardingGenres: Set<Genre> = []   // set once, during onboarding
@@ -127,7 +127,7 @@ final class LibraryStore: ObservableObject {
     /// the first time it appears, and to recover after a failed load — neither
     /// of which is a "refresh" in the earned sense, just filling an empty feed.
     func loadTodayFeedIfNeeded() async {
-        guard recommendations.isEmpty, !isRefreshingRecs else { return }
+        guard recommendationRows.isEmpty, !isRefreshingRecs else { return }
         await refreshRecommendations()
     }
 
@@ -135,21 +135,43 @@ final class LibraryStore: ObservableObject {
         isRefreshingRecs = true
         defer { isRefreshingRecs = false }
         do {
-            let picks = try await recEngine.nextPicks(
+            let rows = try await recEngine.nextPicks(
                 basedOn: entries,
                 onboardingGenres: onboardingGenres,
                 shownBooks: shownBooks
             )
-            let filtered = filterAlreadyShown(picks)
-            recommendations = filtered
-            recordShown(filtered.map { $0.book })
+            let filtered = filterAlreadyShown(rows)
+            recommendationRows = filtered
+            recordShown(filtered.flatMap { $0.recommendations }.map { $0.book })
             recommendationsLoadFailed = false
         } catch {
-            // Leave any existing recommendations on screen — a failed refresh should
+            // Leave any existing rows on screen — a failed refresh should
             // never blank out picks the reader already saw. The retry state lives
             // alongside them instead.
             recommendationsLoadFailed = true
         }
+    }
+
+    // MARK: - Reading progress + goals (decision #18)
+
+    func updateCurrentPage(_ page: Int, for bookID: String) {
+        guard let idx = entries.firstIndex(where: { $0.book.id == bookID }) else { return }
+        entries[idx].currentPage = page
+    }
+
+    /// `goal: nil` clears an existing goal.
+    func setReadingGoal(_ goal: ReadingGoal?, for bookID: String) {
+        guard let idx = entries.firstIndex(where: { $0.book.id == bookID }) else { return }
+        entries[idx].readingGoal = goal
+    }
+
+    /// Today's hero card is singular — if more than one book is somehow
+    /// `.reading` at once, the most recently started wins (decision #17).
+    var currentlyReadingEntry: LibraryEntry? {
+        entries
+            .filter { $0.status == .reading }
+            .sorted { ($0.dateStartedReading ?? .distantPast) > ($1.dateStartedReading ?? .distantPast) }
+            .first
     }
 
     // MARK: - Shown-book exclusion (decision #8)
@@ -157,12 +179,27 @@ final class LibraryStore: ObservableObject {
     /// Defense in depth: even though both prompts are told to exclude
     /// `shownBooks`, a model can still slip one through. Drop it client-side
     /// rather than surface a book the reader has already been shown — a
-    /// shorter-than-requested batch is preferable to a repeat.
+    /// shorter-than-requested batch is preferable to a repeat. Used by Vibe
+    /// Search's flat results list.
     private func filterAlreadyShown(_ recs: [Recommendation]) -> [Recommendation] {
         let shownKeys = Set(shownBooks.map { $0.normalizedKey })
         return recs.filter { rec in
             let key = ShownBookRecord.normalize(title: rec.book.title, author: rec.book.author)
             return !shownKeys.contains(key)
+        }
+    }
+
+    /// Same idea, applied per-row for Today's feed — a row that loses every
+    /// book to this filter is dropped entirely rather than shown empty.
+    private func filterAlreadyShown(_ rows: [RecommendationRow]) -> [RecommendationRow] {
+        let shownKeys = Set(shownBooks.map { $0.normalizedKey })
+        return rows.compactMap { row in
+            let filtered = row.recommendations.filter { rec in
+                let key = ShownBookRecord.normalize(title: rec.book.title, author: rec.book.author)
+                return !shownKeys.contains(key)
+            }
+            guard !filtered.isEmpty else { return nil }
+            return RecommendationRow(label: row.label, kind: row.kind, recommendations: filtered)
         }
     }
 

@@ -1,6 +1,6 @@
 // api/recommend.js
-// POST { read_history: [{ title, author, genres, rating, why_liked }] }
-// Returns { recommendations: [{ book: {...}, reason, confidence }] }
+// POST { read_history, onboarding_genres, currently_reading, shown_books }
+// Returns { rows: [{ label, kind: "taste"|"discovery", recommendations: [{ book, reason, confidence }] }] }
 //
 // Deploy target: Vercel. Runtime: Node.js serverless function.
 // Env var required: ANTHROPIC_API_KEY (set in Vercel project settings, never in code).
@@ -11,7 +11,8 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const SYSTEM_PROMPT = `You are the recommendation engine for Dogear, a reading app.
 Given a reader's onboarding genre picks, finished-book history, and any books currently
-in progress, propose their next 6 reads.
+in progress, organize their next reads into a small set of labeled rows for the Today
+screen — not one flat list.
 
 Reader history uses shelf placement instead of star ratings — treat these as the real
 signal, not a proxy for one:
@@ -28,17 +29,30 @@ and their last few books say more about what to recommend next than their first 
 the recent entries trend toward a different tone, genre, or pace than the older history,
 follow that recent trend rather than averaging it in with everything that came before.
 
+Row structure — this is the core of the task:
+- Produce 1-3 "taste" rows, each grounded in one genuinely distinct, specific pattern
+  from the reader's real history (a specific book, author, pacing quality, structural
+  trait). Only make as many taste rows as the history actually supports distinct
+  patterns for — never pad with a second row that's really the same pattern restated.
+  If read_history is empty, ground taste rows in onboarding_genres instead (e.g. a row
+  for one picked genre, a row for another) rather than waiting for finished books.
+- Produce exactly one "discovery" row: books that intentionally step outside the
+  reader's established pattern — adjacent but genuinely new (a neighboring genre, an
+  unfamiliar structure or era) — never just a repeat of a taste row with a different
+  label. This row exists to stretch the reader, not to hedge.
+- Each row's "label" must be specific and honest, written as if a bookseller were
+  handing over a stack: "Because you loved Beloved," "More slow-burn sci-fi like The
+  Left Hand of Darkness," "Something a little different tonight." Never a generic
+  label like "More fiction" or "You might also like."
+- Each row should contain 4-6 books.
+
 Rules:
 - Never recommend a book already in their read history.
 - Never recommend a book listed in shown_books, even if it would otherwise be a strong
   pick. shown_books is every book already surfaced to this reader by this endpoint or by
   vibe search, whether or not they saved it — it's a hard exclusion, just like read_history.
-- If read_history is empty, lean on onboarding_genres alone — don't wait for finished
-  books to make a real pick.
 - Prefer specificity over safety: real, findable, in-print books only. No invented titles.
-- Vary the picks: not all the same genre, but every pick should trace back to a
-  concrete pattern in their history (pacing, tone, subject, structure) — not just
-  "similar genre."
+- No book should appear in more than one row.
 - "reason" must be one sentence, written directly to the reader ("you"), naming the
   specific pattern that earned this pick. No generic praise ("a wonderful read").
 - confidence is your own calibrated 0.0-1.0 estimate of fit, used only for sort order —
@@ -47,12 +61,18 @@ Rules:
 Return ONLY valid JSON matching this exact shape, nothing else — no markdown fences,
 no preamble:
 {
-  "recommendations": [
+  "rows": [
     {
-      "title": "string",
-      "author": "string",
-      "reason": "string",
-      "confidence": 0.0
+      "label": "string",
+      "kind": "taste",
+      "recommendations": [
+        {
+          "title": "string",
+          "author": "string",
+          "reason": "string",
+          "confidence": 0.0
+        }
+      ]
     }
   ]
 }`;
@@ -81,14 +101,14 @@ export default async function handler(req, res) {
     : JSON.stringify({
         onboarding_genres: onboarding_genres ?? [],
         shown_books: shown_books ?? [],
-        note: "No finished books yet — recommend 6 strong, well-loved books within or " +
-              "adjacent to these genres to seed their shelf, excluding anything in shown_books."
+        note: "No finished books yet — ground taste rows in these genres and still " +
+              "include one discovery row, excluding anything in shown_books."
       }, null, 2);
 
   try {
     const msg = await anthropic.messages.create({
       model: "claude-sonnet-5",
-      max_tokens: 1500,
+      max_tokens: 2500,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: historyText }],
     });
@@ -96,21 +116,51 @@ export default async function handler(req, res) {
     const raw = msg.content.find((b) => b.type === "text")?.text ?? "{}";
     const parsed = JSON.parse(raw);
 
-    const enriched = [];
-    for (const rec of parsed.recommendations ?? []) {
-      const book = await lookupBook(rec.title, rec.author);
-      enriched.push({
-        book,
-        reason: rec.reason,
-        confidence: rec.confidence ?? 0.5,
+    const rows = [];
+    for (const row of parsed.rows ?? []) {
+      const enrichedBooks = [];
+      for (const rec of row.recommendations ?? []) {
+        const book = await safeLookupBook(rec.title, rec.author);
+        enrichedBooks.push({
+          book,
+          reason: rec.reason,
+          confidence: rec.confidence ?? 0.5,
+        });
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      rows.push({
+        label: row.label,
+        kind: row.kind === "discovery" ? "discovery" : "taste",
+        recommendations: enrichedBooks,
       });
-      await new Promise((r) => setTimeout(r, 250));
     }
 
-    return res.status(200).json({ recommendations: enriched });
+    return res.status(200).json({ rows });
   } catch (err) {
     console.error("recommend error:", err);
     return res.status(500).json({ error: "recommendation failed" });
+  }
+}
+
+// Decision #21 reliability fix: a single book's metadata lookup failing (Google
+// Books timeout, malformed response, etc.) must never take down the whole
+// request. lookupBook()/tryGoogleBooksQuery() already degrade internally
+// (Google -> Open Library -> bare fallback), but this is the last line of
+// defense for anything that still throws unexpectedly.
+async function safeLookupBook(title, author) {
+  try {
+    return await lookupBook(title, author);
+  } catch (err) {
+    console.error("lookupBook failed unexpectedly, using bare fallback:", title, author, err?.message);
+    return {
+      id: `${title}-${author}`.replace(/\s+/g, "-").toLowerCase(),
+      title,
+      author,
+      coverURL: null,
+      pageCount: null,
+      genres: [],
+      summary: null,
+    };
   }
 }
 
@@ -179,13 +229,29 @@ async function lookupOpenLibrary(title, author) {
   }
 }
 
-async function tryGoogleBooksQuery(query, keyParam) {
+// Decision #21: wrap the actually-flaky call (Google Books has shown
+// intermittent backendFailed 503s and outright request failures) in its own
+// try/catch with one retry before giving up and letting lookupBook() fall
+// through to Open Library. Previously this fetch was unguarded — a thrown
+// error here propagated all the way out of the per-book loop and failed the
+// entire recommend() request over a single cover lookup.
+async function tryGoogleBooksQuery(query, keyParam, attempt = 0) {
   const q = encodeURIComponent(query);
   const url = `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${keyParam}`;
-  const resp = await fetch(url);
-  const data = await resp.json();
-  if (data.error) {
-    console.error("Google Books error for query:", query, JSON.stringify(data.error));
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.error) {
+      console.error("Google Books error for query:", query, JSON.stringify(data.error));
+      return null;
+    }
+    return data.items?.[0] ?? null;
+  } catch (err) {
+    if (attempt === 0) {
+      console.error("Google Books fetch failed, retrying once:", query, err?.message);
+      return tryGoogleBooksQuery(query, keyParam, attempt + 1);
+    }
+    console.error("Google Books fetch failed after retry, falling back:", query, err?.message);
+    return null;
   }
-  return data.items?.[0] ?? null;
 }

@@ -13,4 +13,12 @@ enum DogearType {
 
     /// Reserved for greetings, atmosphere, short reflective statements only.
     static var titleItalic: Font { title.italic() }
+
+    /// Not in Design System 0.1 — added for Phase 3's recommendation row
+    /// labels ("Because you loved Beloved"), which are short reflective
+    /// statements per Section 04's italic-serif rule but repeat several times
+    /// per screen, so full Title (24pt) reads too heavy stacked. Sits between
+    /// Title and Body; flagging for formalization into the design doc.
+    static let rowLabel = Font.system(size: 18, weight: .regular, design: .serif)
+    static var rowLabelItalic: Font { rowLabel.italic() }
 }

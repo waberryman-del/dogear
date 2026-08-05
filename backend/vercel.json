@@ -1,7 +1,7 @@
 {
   "functions": {
-    "api/recommend.js": { "maxDuration": 30 },
+    "api/recommend.js": { "maxDuration": 60 },
     "api/why-liked-it.js": { "maxDuration": 15 },
-    "api/vibe-search.js": { "maxDuration": 30 }
+    "api/vibe-search.js": { "maxDuration": 60 }
   }
 }

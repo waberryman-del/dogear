@@ -58,11 +58,14 @@ struct RecommendationEngine {
         shownBooks.map { "\($0.title) by \($0.author)" }
     }
 
+    /// Returns Today's feed as labeled rows (decision #19) rather than a flat
+    /// list — 1-3 taste rows grounded in specific patterns from the reader's
+    /// history plus exactly one discovery row, per `recommend.js`'s prompt.
     func nextPicks(
         basedOn library: [LibraryEntry],
         onboardingGenres: Set<Genre>,
         shownBooks: [ShownBookRecord]
-    ) async throws -> [Recommendation] {
+    ) async throws -> [RecommendationRow] {
         let payload: [String: Any] = [
             "onboarding_genres": onboardingGenres.map { $0.rawValue },
             "read_history": readHistoryPayload(from: library),
@@ -73,7 +76,7 @@ struct RecommendationEngine {
         let request = try makeRequest(path: "recommend", body: payload)
         let (data, _) = try await URLSession.shared.data(for: request)
         let decoded = try JSONDecoder().decode(RecommendationResponse.self, from: data)
-        return decoded.recommendations
+        return decoded.rows
     }
 
     /// Phase 2: free-text mood/vibe search, blended with the reader's actual
@@ -122,7 +125,7 @@ struct VibeSearchResult {
 }
 
 private struct RecommendationResponse: Codable {
-    let recommendations: [Recommendation]
+    let rows: [RecommendationRow]
 }
 
 private struct VibeSearchResponse: Codable {

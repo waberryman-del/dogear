@@ -53,6 +53,17 @@ struct LibraryEntry: Identifiable, Codable, Equatable {
     var aiWhyYouLikedIt: String?          // generated once, on shelf placement
     var midpointCheckIn: MidpointCheckIn?
     var highlights: [Highlight]
+    var currentPage: Int?             // manual entry only — no quick-add, no slider (decision #18)
+    var readingGoal: ReadingGoal?      // set/edited from the Today hero card
+}
+
+/// Target page + target date, set and edited from the Today hero card
+/// (decision #18). The pace indicator (on track / behind) is computed from
+/// this plus `LibraryEntry.currentPage` and `dateStartedReading` — not stored,
+/// since it changes with every day that passes even if nothing else does.
+struct ReadingGoal: Codable, Equatable {
+    var targetPage: Int
+    var targetDate: Date
 }
 
 /// One check-in per book, fixed 5 days after dateStartedReading. Yes/no only —
@@ -74,6 +85,23 @@ struct Recommendation: Identifiable, Codable, Equatable {
     var book: Book
     var reason: String          // AI-generated "why this, why now"
     var confidence: Double      // 0-1, used for ordering only, never shown raw
+}
+
+/// Today's feed is organized into labeled, horizontally-scrolling rows rather
+/// than one flat list (decision #19) — this is the shape `recommend.js` now
+/// returns. `label` is specific and reader-facing ("Because you loved
+/// Beloved"), never generic. `kind` distinguishes the one discovery row from
+/// the taste-anchored ones so the UI can give it a different visual cue.
+struct RecommendationRow: Identifiable, Codable, Equatable {
+    var id: String { label }
+    var label: String
+    var kind: RowKind
+    var recommendations: [Recommendation]
+}
+
+enum RowKind: String, Codable {
+    case taste
+    case discovery
 }
 
 /// One entry per book ever surfaced by `recommend.js` or `vibe-search.js`,

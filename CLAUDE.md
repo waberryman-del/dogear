@@ -47,11 +47,11 @@ silently reordering these, stop and flag it explicitly instead of just doing it.
   the "start reading" flow, midpoint check-ins (decision #5), and the SwiftData
   persistence migration this all depends on. This turns My Shelf from a static list
   into the actual product.
-- **Phase 4 — Design pass.** Real app icon and brand colors (replacing the current
-  placeholder forest/ink/brass palette if Walker has finalized different ones by
-  then), the fold-gesture signature interaction (decision #6), empty states, loading
-  polish. Deliberately last — no point polishing screens whose shape Phase 2 and 3
-  are still going to change.
+- *- **Phase 4 — Design pass.** Real app icon and brand colors — see decision #22 below,
+  which now supersedes the placeholder forest/ink/brass palette — the fold-gesture
+  signature interaction (decision #6), empty states, loading polish. Deliberately
+  last — no point polishing screens whose shape Phase 2 and 3 are still going to
+  change.
 - **Phase 5 — Real-world testing + TestFlight.**
 
 ## Vibe search spec (Phase 2)
@@ -185,6 +185,25 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
     time plus metadata lookups with retries, since users have hit
     intermittent "couldn't reach your library's brain" failures that are
     most likely timeout-related, not hard errors.
+22. **[Phase 4 reference — do not act on this yet] A finished brand board
+    exists at `docs/brand-board.png`.** When Phase 4 actually starts, this
+    board — not the current placeholder palette or `docs/Dogear_Design_System_v0_1_1_.docx`
+    — is the intended source of truth to design and build toward. It includes:
+    a real app icon (green rounded-square with a dog-ear/dog-profile mark), a
+    refined palette (`#0F2B22`, `#2E4A3A`, `#F6F1E7`, `#E7DECA`, `#C79A62` —
+    distinct from the current `#1F3A2E`-based placeholder set), Playfair
+    Display for headlines paired with Inter for body/UI text, and — notably —
+    **color-coded shelf spines matching decision #2/#3's three shelves**
+    (deep green for "keep forever," warm tan for "glad I read it," oxblood/rust
+    for "should've stopped"), which is a more concrete execution of that
+    decision than anything specified in text so far. It also shows a fully
+    designed 5-tab bar (Home / Discover / Ask Dogear / Library / Profile) —
+    this is a real, considered answer to the tab-navigation question, but
+    decision #12's reasoning (no empty placeholder tabs) still holds until
+    Library and Profile have real content; expanding beyond the current
+    Today/Find 2-tab bar is a Phase 4 decision, not one to make now.
+    Do not start building toward this board during Phase 2 or 3 work — this
+    entry exists so a future session knows it's there when Phase 4 opens.
 ## Design identity
 - **Palette**: unchanged from the earlier prototype and still the right call — deep
   forest `#1F3A2E`, ink `#16241D`, linen `#EFE9D8`, brass `#C08A3E`, rust `#9B4B3A`.
