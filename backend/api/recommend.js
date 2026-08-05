@@ -126,6 +126,7 @@ export default async function handler(req, res) {
       }, null, 2);
 
   try {
+    const claudeStart = Date.now();
     const msg = await anthropic.messages.create({
       model: "claude-sonnet-5",
       // Rows can run up to 3 taste rows + 1 discovery row x 6 books each, and
@@ -138,6 +139,7 @@ export default async function handler(req, res) {
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: historyText }],
     });
+    const claudeMs = Date.now() - claudeStart;
 
     const raw = msg.content.find((b) => b.type === "text")?.text ?? "{}";
     let parsed;
@@ -162,10 +164,12 @@ export default async function handler(req, res) {
       });
     });
 
+    const lookupStart = Date.now();
     const enrichedFlat = await mapWithConcurrency(flat, LOOKUP_CONCURRENCY, async ({ rec }) => {
       const book = await safeLookupBook(rec.title, rec.author);
       return { book, reason: rec.reason, confidence: rec.confidence ?? 0.5 };
     });
+    const lookupMs = Date.now() - lookupStart;
 
     const rowBuckets = (parsed.rows ?? []).map(() => []);
     enrichedFlat.forEach((enriched, i) => {
@@ -177,6 +181,15 @@ export default async function handler(req, res) {
       kind: row.kind === "discovery" ? "discovery" : "taste",
       recommendations: rowBuckets[i],
     }));
+
+    // Standard Server-Timing header — doesn't touch the JSON contract, just
+    // makes the claude-vs-lookup split inspectable (curl -i / browser
+    // devtools / Vercel logs) without guessing where latency goes.
+    res.setHeader(
+      "Server-Timing",
+      `claude;dur=${claudeMs}, lookup;dur=${lookupMs}, books;desc="${flat.length}"`
+    );
+    console.log(`recommend timing: claude=${claudeMs}ms lookup=${lookupMs}ms books=${flat.length}`);
 
     return res.status(200).json({ rows });
   } catch (err) {
