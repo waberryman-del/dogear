@@ -111,16 +111,57 @@ async function lookupBook(title, author) {
     item = await tryGoogleBooksQuery(`${title} ${author}`, keyParam);
   }
 
-  const info = item?.volumeInfo;
-  return {
-    id: item?.id ?? `${title}-${author}`.replace(/\s+/g, "-").toLowerCase(),
-    title: info?.title ?? title,
-    author: info?.authors?.[0] ?? author,
-    coverURL: info?.imageLinks?.thumbnail ?? null,
-    pageCount: info?.pageCount ?? null,
-    genres: info?.categories ?? [],
-    summary: info?.description ?? null,
-  };
+  if (item) {
+    const info = item.volumeInfo;
+    return {
+      id: item.id,
+      title: info?.title ?? title,
+      author: info?.authors?.[0] ?? author,
+      coverURL: info?.imageLinks?.thumbnail ?? null,
+      pageCount: info?.pageCount ?? null,
+      genres: info?.categories ?? [],
+      summary: info?.description ?? null,
+    };
+  }
+
+  // Google's Books API has been intermittently failing entirely (backendFailed
+  // 503s) — fall back to Open Library, which needs no API key and has its own
+  // large, independent catalog and cover-image service.
+  return lookupOpenLibrary(title, author);
+}
+
+async function lookupOpenLibrary(title, author) {
+  try {
+    const q = encodeURIComponent(`${title} ${author}`);
+    const resp = await fetch(
+      `https://openlibrary.org/search.json?q=${q}&limit=1`
+    );
+    const data = await resp.json();
+    const doc = data.docs?.[0];
+
+    return {
+      id: doc?.key ?? `${title}-${author}`.replace(/\s+/g, "-").toLowerCase(),
+      title: doc?.title ?? title,
+      author: doc?.author_name?.[0] ?? author,
+      coverURL: doc?.cover_i
+        ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
+        : null,
+      pageCount: doc?.number_of_pages_median ?? null,
+      genres: doc?.subject?.slice(0, 3) ?? [],
+      summary: null,
+    };
+  } catch (err) {
+    console.error("Open Library lookup failed:", err);
+    return {
+      id: `${title}-${author}`.replace(/\s+/g, "-").toLowerCase(),
+      title,
+      author,
+      coverURL: null,
+      pageCount: null,
+      genres: [],
+      summary: null,
+    };
+  }
 }
 
 async function tryGoogleBooksQuery(query, keyParam) {
