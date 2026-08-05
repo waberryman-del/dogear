@@ -52,6 +52,15 @@ struct RecommendationEngine {
         return decoded.recommendations
     }
 
+    /// Phase 2: free-text mood/vibe search — no genre or history payload, the query
+    /// text is the whole interface (see CLAUDE.md's vibe search spec).
+    func vibeSearch(query: String) async throws -> [Recommendation] {
+        let request = try makeRequest(path: "vibe-search", body: ["query": query])
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let decoded = try JSONDecoder().decode(VibeSearchResponse.self, from: data)
+        return decoded.results
+    }
+
     func generateWhyYouLikedIt(for entry: LibraryEntry) async throws -> String {
         let request = try makeRequest(path: "why-liked-it", body: [
             "title": entry.book.title,
@@ -67,4 +76,8 @@ struct RecommendationEngine {
 
 private struct RecommendationResponse: Codable {
     let recommendations: [Recommendation]
+}
+
+private struct VibeSearchResponse: Codable {
+    let results: [Recommendation]
 }

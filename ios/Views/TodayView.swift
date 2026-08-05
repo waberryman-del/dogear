@@ -71,14 +71,25 @@ struct TodayView: View {
                 Text("Good evening").font(.system(.title, design: .serif)).italic()
             }
             Spacer()
-            NavigationLink {
-                MyShelfView()
-            } label: {
-                VStack(spacing: 2) {
-                    Image(systemName: "books.vertical")
-                    Text("My shelf").font(.caption2)
+            HStack(spacing: 20) {
+                NavigationLink {
+                    VibeSearchView()
+                } label: {
+                    VStack(spacing: 2) {
+                        Image(systemName: "magnifyingglass")
+                        Text("Vibe search").font(.caption2)
+                    }
+                    .foregroundStyle(Color("Ink"))
                 }
-                .foregroundStyle(Color("Ink"))
+                NavigationLink {
+                    MyShelfView()
+                } label: {
+                    VStack(spacing: 2) {
+                        Image(systemName: "books.vertical")
+                        Text("My shelf").font(.caption2)
+                    }
+                    .foregroundStyle(Color("Ink"))
+                }
             }
         }
         .padding(.horizontal)
@@ -105,17 +116,5 @@ struct TodayView: View {
             .disabled(library.isRefreshingRecs)
         }
         .padding(.horizontal)
-    }
-}
-
-private struct RecommendationCard: View {
-    let rec: Recommendation
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            BookCoverView(url: rec.book.coverURL, title: rec.book.title, width: 104, height: 150)
-            Text(rec.book.title).font(.caption.bold()).lineLimit(1)
-            Text(rec.reason).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
-        }
-        .frame(width: 104)
     }
 }

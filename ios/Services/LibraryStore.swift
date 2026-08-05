@@ -80,6 +80,15 @@ final class LibraryStore: ObservableObject {
         await refreshRecommendations()   // earned refresh
     }
 
+    // MARK: - Vibe search (Phase 2)
+
+    /// Results are scoped to whichever screen asked — unlike `recommendations`,
+    /// this isn't app-wide state, so it's just a throwing passthrough to the
+    /// service layer rather than another @Published array.
+    func vibeSearch(query: String) async throws -> [Recommendation] {
+        try await recEngine.vibeSearch(query: query)
+    }
+
     // MARK: - Manual refresh (the bell)
 
     func ringTheBell() async {

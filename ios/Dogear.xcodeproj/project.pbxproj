@@ -9,8 +9,10 @@
 /* Begin PBXBuildFile section */
 		11D82512F84BEF5AB3255AF9 /* MyShelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CDD781F4982ECA991B971D3 /* MyShelfView.swift */; };
 		12AFF6743E64F9705DD728C3 /* RecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A9F16DD3CD8D378DC9171F3 /* RecommendationEngine.swift */; };
+		2922FB03A48C45097C9A4DA1 /* RecommendationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D13E0C4958AB37EB52984106 /* RecommendationCard.swift */; };
 		38A62EFB30E62C717A02B6CE /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388C1C21E294ED14AA91D0F1 /* AppRootView.swift */; };
 		3E5267540396AB4614DC2C3F /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E2C7C1C2BF4B577E773EFB /* TodayView.swift */; };
+		43800295D5E0B300DA3500C8 /* VibeSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B081C5766302DCB70740F14 /* VibeSearchView.swift */; };
 		487FFA5B5A3A396C7B07F04B /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B2F53441F920C23DB3E64A8 /* RootTabView.swift */; };
 		58AF95D724B9D74D65C38A11 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870E944D70CCC3F2D62DD3A9 /* OnboardingView.swift */; };
 		677C57EA87DE231E5FB50D6D /* Book.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28169EC0586B53F9F89B2E7 /* Book.swift */; };
@@ -27,14 +29,16 @@
 		1B46B8408922363F8F3ED528 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		1D4CE24CB190703A2597D2EE /* BookCoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCoverView.swift; sourceTree = "<group>"; };
 		21E2C7C1C2BF4B577E773EFB /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		2B081C5766302DCB70740F14 /* VibeSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VibeSearchView.swift; sourceTree = "<group>"; };
 		2CDD781F4982ECA991B971D3 /* MyShelfView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyShelfView.swift; sourceTree = "<group>"; };
 		388C1C21E294ED14AA91D0F1 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
 		5A9F16DD3CD8D378DC9171F3 /* RecommendationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationEngine.swift; sourceTree = "<group>"; };
 		870E944D70CCC3F2D62DD3A9 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		9B2F53441F920C23DB3E64A8 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
-		9D38E5D411645DA14B0AF51A /* Dogear.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Dogear.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9D38E5D411645DA14B0AF51A /* Dogear.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Dogear.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C28169EC0586B53F9F89B2E7 /* Book.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
 		C773F1E1E925E5A15625A1FA /* OtherViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherViews.swift; sourceTree = "<group>"; };
+		D13E0C4958AB37EB52984106 /* RecommendationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationCard.swift; sourceTree = "<group>"; };
 		D368EFF48A6CEAB5DF0A7252 /* LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryStore.swift; sourceTree = "<group>"; };
 		DA778A5AF4BFC532B3CBA34A /* BookDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailView.swift; sourceTree = "<group>"; };
 		FBA93B138CDB691769D27D95 /* DogearApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DogearApp.swift; sourceTree = "<group>"; };
@@ -67,6 +71,10 @@
 			children = (
 				1221870A53B0CB57D50AE3E9 /* Assets.xcassets */,
 				FBA93B138CDB691769D27D95 /* DogearApp.swift */,
+				BAD7A90D8B9FE44E56854BA5 /* Generated */,
+				C37E10CAFBAAFE82BCA3EEC1 /* Models */,
+				2ECEB97AEC9C03D9B0753E01 /* Services */,
+				635FC13D044060FA22A0F26F /* Views */,
 			);
 			name = ios;
 			path = .;
@@ -81,8 +89,10 @@
 				2CDD781F4982ECA991B971D3 /* MyShelfView.swift */,
 				870E944D70CCC3F2D62DD3A9 /* OnboardingView.swift */,
 				C773F1E1E925E5A15625A1FA /* OtherViews.swift */,
+				D13E0C4958AB37EB52984106 /* RecommendationCard.swift */,
 				9B2F53441F920C23DB3E64A8 /* RootTabView.swift */,
 				21E2C7C1C2BF4B577E773EFB /* TodayView.swift */,
+				2B081C5766302DCB70740F14 /* VibeSearchView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -142,6 +152,7 @@
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					69D757EADC015F0A35B1E05D = {
+						DevelopmentTeam = U6U59A7GGT;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -190,9 +201,11 @@
 				11D82512F84BEF5AB3255AF9 /* MyShelfView.swift in Sources */,
 				58AF95D724B9D74D65C38A11 /* OnboardingView.swift in Sources */,
 				FFE1209072A046D943853A12 /* OtherViews.swift in Sources */,
+				2922FB03A48C45097C9A4DA1 /* RecommendationCard.swift in Sources */,
 				12AFF6743E64F9705DD728C3 /* RecommendationEngine.swift in Sources */,
 				487FFA5B5A3A396C7B07F04B /* RootTabView.swift in Sources */,
 				3E5267540396AB4614DC2C3F /* TodayView.swift in Sources */,
+				43800295D5E0B300DA3500C8 /* VibeSearchView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -205,6 +218,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = U6U59A7GGT;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Generated/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -223,6 +237,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = U6U59A7GGT;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Generated/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -270,7 +285,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = U6U59A7GGT;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -336,7 +350,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = U6U59A7GGT;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
