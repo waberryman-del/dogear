@@ -90,11 +90,12 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
    how the reader felt. Never add a 1-5 or thumbs mechanism back in.
 3. **Archive is organized by the three shelves**, not a flat grid of every book. Within
    each shelf, books still render as spines (visual language from `prototype.html`).
-4. **Recommendation refresh is earned, not scheduled.** New picks generate automatically
-   whenever a book is placed on a shelf. There is no daily timer. A manual "ring the
-   bell" action (`LibraryStore.ringTheBell()`) lets the reader force a refresh anytime
-   without finishing anything — build this as a real, visible UI element (a bell or
-   pull-tab), not a hidden pull-to-refresh gesture, since it's a named feature.
+4. 4. **[AMENDED after on-device testing] Recommendation refresh is earned, not scheduled.**
+   New picks generate automatically whenever a book is placed on a shelf. There is no
+   daily timer and no manual "ring the bell" control — that UI element is cut. Find
+   (Vibe Search, decision 11) is now the on-demand discovery surface, making a separate
+   manual refresh redundant. Today stays a pure, automatically-updating recommendation
+   feed.
 5. **Mid-book check-in**: exactly once per book, 5 days after it's marked "reading"
    (`LibraryEntry.dateStartedReading + 5 days`, see `midpointCheckIn.askedOn`). A single
    yes/no prompt: "still enjoying this one?" This requires a **local** notification
@@ -129,11 +130,14 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
     system prompt should explicitly instruct the model to filter/interpret the
     vibe through that specific reader's taste — "atmospheric and slow" should
     produce different results for two readers with different histories.
-11. **Vibe Search is entered prominently from Today**, not buried in a secondary
-    menu, and not (yet) its own tab. It should feel central to the product.
-12. **Do not implement the full five-tab navigation** (Today / Find / Archive /
-    Vault / You, per the design system) until Archive, Vault, and You are real,
-    useful destinations. No empty placeholder tabs.
+11. 11. **[AMENDED after on-device testing] Vibe Search ("Find") has its own bottom tab**,
+    alongside Today. A header-row entry point on Today wasn't discoverable enough in
+    practice — a standard bottom tab is the right call here, not a compromise.
+    Today and Find are two distinct surfaces: Today is pure, automatic recommendation
+    browsing; Find is on-demand, query-driven discovery blended with taste (decision 10).
+    They are not duplicates of each other.
+12. **Only Today and Find exist as tabs for now.** Do not add Archive, Vault, or You
+    tabs until those destinations are real and useful — no empty placeholder tabs.
 13. **The initial Vibe Search interface is free text only.** No genre dropdowns,
     filters, sliders, or structured controls beside the text field, ever, at entry.
 14. **Contextual one-tap refinements** (e.g. "slower," "less dark," "more
