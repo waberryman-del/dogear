@@ -106,8 +106,10 @@ export default async function handler(req, res) {
 
 async function lookupBook(title, author) {
   const q = encodeURIComponent(`intitle:${title} inauthor:${author}`);
+  const key = process.env.GOOGLE_BOOKS_API_KEY;
+  const keyParam = key ? `&key=${key}` : "";
   const resp = await fetch(
-    `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`
+    `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${keyParam}`
   );
   const data = await resp.json();
   const item = data.items?.[0];

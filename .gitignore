@@ -1,0 +1,8 @@
+.DS_Store
+ios/Dogear.xcodeproj/xcuserdata/
+ios/Dogear.xcodeproj/project.xcworkspace/xcuserdata/
+ios/Generated/
+ios/DerivedData/
+ios/*.xcresult
+backend/node_modules/
+backend/.vercel/

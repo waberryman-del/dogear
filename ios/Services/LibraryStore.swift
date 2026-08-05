@@ -6,14 +6,29 @@ final class LibraryStore: ObservableObject {
     @Published var entries: [LibraryEntry] = []
     @Published var recommendations: [Recommendation] = []
     @Published var isRefreshingRecs = false
+    @Published var recommendationsLoadFailed = false
     @Published var onboardingGenres: Set<Genre> = []   // set once, during onboarding
+    @Published private(set) var hasCompletedOnboarding: Bool
 
     private let recEngine = RecommendationEngine()
+    private let defaults = UserDefaults.standard
+    private let hasOnboardedKey = "dogear.hasCompletedOnboarding"
+    private let onboardingGenresKey = "dogear.onboardingGenres"
+
+    init() {
+        hasCompletedOnboarding = defaults.bool(forKey: hasOnboardedKey)
+        if let saved = defaults.array(forKey: onboardingGenresKey) as? [String] {
+            onboardingGenres = Set(saved.compactMap(Genre.init(rawValue:)))
+        }
+    }
 
     // MARK: - Onboarding
 
     func completeOnboarding(genres: Set<Genre>) async {
         onboardingGenres = genres
+        defaults.set(genres.map { $0.rawValue }, forKey: onboardingGenresKey)
+        defaults.set(true, forKey: hasOnboardedKey)
+        hasCompletedOnboarding = true
         await refreshRecommendations()   // seeds the very first shelf from genres alone
     }
 
@@ -74,9 +89,17 @@ final class LibraryStore: ObservableObject {
     private func refreshRecommendations() async {
         isRefreshingRecs = true
         defer { isRefreshingRecs = false }
-        recommendations = (try? await recEngine.nextPicks(
-            basedOn: entries,
-            onboardingGenres: onboardingGenres
-        )) ?? []
+        do {
+            recommendations = try await recEngine.nextPicks(
+                basedOn: entries,
+                onboardingGenres: onboardingGenres
+            )
+            recommendationsLoadFailed = false
+        } catch {
+            // Leave any existing recommendations on screen — a failed refresh should
+            // never blank out picks the reader already saw. The retry state lives
+            // alongside them instead.
+            recommendationsLoadFailed = true
+        }
     }
 }

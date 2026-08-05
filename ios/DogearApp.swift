@@ -6,7 +6,7 @@ struct DogearApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootTabView()
+            AppRootView()
                 .environmentObject(library)
         }
     }

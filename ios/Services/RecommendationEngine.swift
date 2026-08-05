@@ -33,7 +33,7 @@ struct RecommendationEngine {
                     "title": entry.book.title,
                     "author": entry.book.author,
                     "genres": entry.book.genres,
-                    "shelf_placement": entry.shelfPlacement?.rawValue ?? NSNull(),
+                    "shelf_placement": (entry.shelfPlacement?.rawValue as Any?) ?? NSNull(),
                     "why_liked": entry.aiWhyYouLikedIt ?? ""
                 ]
             },
@@ -41,7 +41,7 @@ struct RecommendationEngine {
             "currently_reading": currentlyReading.map { entry in
                 [
                     "title": entry.book.title,
-                    "still_enjoying_midpoint": entry.midpointCheckIn?.stillEnjoying ?? NSNull()
+                    "still_enjoying_midpoint": (entry.midpointCheckIn?.stillEnjoying as Any?) ?? NSNull()
                 ]
             }
         ]
@@ -56,7 +56,7 @@ struct RecommendationEngine {
         let request = try makeRequest(path: "why-liked-it", body: [
             "title": entry.book.title,
             "shelf_placement": entry.shelfPlacement?.rawValue ?? "gladIReadIt",
-            "still_enjoying_midpoint": entry.midpointCheckIn?.stillEnjoying ?? NSNull(),
+            "still_enjoying_midpoint": (entry.midpointCheckIn?.stillEnjoying as Any?) ?? NSNull(),
             "highlights": entry.highlights.map { $0.text }
         ])
         let (data, _) = try await URLSession.shared.data(for: request)
