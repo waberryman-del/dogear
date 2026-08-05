@@ -10,17 +10,68 @@ page corner every reader recognizes — tactile, unpretentious, no explanation n
   injected via `.environmentObject`. No third-party dependency managers needed for v1 —
   keep it Apple-native (URLSession, Codable, SwiftData for persistence).
 - **Persistence**: SwiftData (not Core Data, not a remote DB) for v1. Local-first: the
-  library lives on-device. Add CloudKit sync only after core UX is solid.
-- **Backend**: Two Vercel serverless functions (`backend/api/recommend.js`,
-  `backend/api/why-liked-it.js`), already written — see `backend/`. They hold the
+  library lives on-device. Add CloudKit sync only after core UX is solid. Currently
+  in-memory only (`LibraryStore.entries`) — this migration is still pending, tracked
+  in Phase 3 below, don't let it get skipped silently.
+- **Backend**: Vercel serverless functions in `backend/api/` — `recommend.js` and
+  `why-liked-it.js` exist; `vibe-search.js` is new in Phase 2 (see below). All hold
   `ANTHROPIC_API_KEY` server-side and call the Anthropic Messages API
-  (model: `claude-sonnet-4-6`). The iOS app never talks to Anthropic directly.
-- **Book metadata**: Google Books API, called server-side inside `recommend.js` to
-  enrich AI picks with real covers/page counts. No API key needed for basic search
-  volume, but watch for rate limits at scale.
+  (model: `claude-sonnet-5` — verify this string is still current before using it in
+  new endpoints; it has been wrong once already in this project's history). The iOS
+  app never talks to Anthropic directly.
+- **Book metadata**: two sources, in order — Google Books API (server-side, with
+  `GOOGLE_BOOKS_API_KEY` env var, since unauthenticated calls hit quota almost
+  immediately) as primary, falling back to Open Library (`openlibrary.org/search.json`,
+  no key needed) whenever Google's result is empty or its API errors out (it has shown
+  intermittent `backendFailed` 503s in production — this is a known Google-side
+  reliability issue, not something to keep debugging on our end). Any new endpoint that
+  needs book metadata should use this same two-source pattern, not just Google alone.
 - **Auth to backend**: a shared secret header (`X-App-Secret`), checked against
   `APP_SHARED_SECRET` env var on Vercel. Not real security, just abuse prevention —
   fine for v1, revisit before any public launch with real user accounts.
+
+## Roadmap — locked, in order, do not reorder or skip ahead
+This is the actual plan going forward. If any future session (Claude Code or otherwise)
+proposes jumping ahead to a later phase before the current one is genuinely done, or
+silently reordering these, stop and flag it explicitly instead of just doing it.
+
+- **Phase 1 — done.** Onboarding (genre picks), Today screen with real AI
+  recommendations, tap-to-detail, add to shelf, a basic My Shelf screen, real cover
+  art (Google Books + Open Library fallback, https-only URLs).
+- **Phase 2 — Vibe search (current phase).** The standout feature: a search
+  experience where the reader types free text — a mood, a sentence, a vibe, not a
+  genre — and gets AI-curated book matches. See "Vibe search spec" below. This is
+  what differentiates Dogear from Goodreads/StoryGraph-style trackers; treat it as
+  a first-class feature, not an experiment bolted onto Today.
+- **Phase 3 — Real organization.** The three-shelf placement system (decision #2/#3),
+  the "start reading" flow, midpoint check-ins (decision #5), and the SwiftData
+  persistence migration this all depends on. This turns My Shelf from a static list
+  into the actual product.
+- **Phase 4 — Design pass.** Real app icon and brand colors (replacing the current
+  placeholder forest/ink/brass palette if Walker has finalized different ones by
+  then), the fold-gesture signature interaction (decision #6), empty states, loading
+  polish. Deliberately last — no point polishing screens whose shape Phase 2 and 3
+  are still going to change.
+- **Phase 5 — Real-world testing + TestFlight.**
+
+## Vibe search spec (Phase 2)
+- New backend endpoint: `backend/api/vibe-search.js`. Same auth pattern
+  (`X-App-Secret`), same book-metadata enrichment pattern (Google Books → Open
+  Library fallback) as `recommend.js` — copy that structure, don't reinvent it.
+- Input: free-text string from the reader (a sentence, a mood, a handful of words —
+  "something atmospheric and slow like a rainy Sunday," "books that feel like a
+  Fleetwood Mac album," etc.). No structured fields, no genre dropdown alongside it —
+  the text box IS the whole interface.
+- The system prompt for this endpoint should interpret tone, pacing, mood, and
+  imagery from the input, not just keyword-match genres. Reuse the same "real,
+  findable, in-print books only" and "one specific sentence, not generic praise"
+  rules from `recommend.js`'s prompt.
+- iOS side: a new screen or a search bar prominent on Today (Claude Code's call which
+  fits better once it sees the current layout) — a text field, a submit action, and
+  a results list reusing the same card/detail-sheet components already built for
+  Today's recommendations. Don't build a whole parallel UI system for this.
+- This does NOT replace the genre-seeded Today recommendations — it's an additional,
+  on-demand way to get picks, sitting alongside the earned/bell-refresh system.
 
 ## Data model (already scaffolded in `ios/Models/Book.swift`)
 `Book`, `Genre` (fixed onboarding list), `ShelfPlacement` (keepForever / gladIReadIt /
@@ -52,6 +103,11 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
    conflict with the "no push notifications" rule below.
 6. **Signature interaction**: press-and-hold a book cover to fold its corner down —
    this is how you save/bookmark, not a heart or generic bookmark icon.
+7. **The recommendation engine and vibe search are the product, not a feature.**
+   When either needs a tradeoff between "ship something plausible" and "actually
+   reason well about this specific reader/query," take the slower, better-reasoned
+   path. This is explicitly the thing meant to beat other book trackers — don't let
+   it regress to generic genre-matching to save time.
 
 ## Design identity
 - **Palette**: unchanged from the earlier prototype and still the right call — deep
