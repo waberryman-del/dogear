@@ -72,18 +72,6 @@ struct BookDetailView: View {
     }
 
     private var cover: some View {
-        RoundedRectangle(cornerRadius: 4)
-            .fill(Color("Forest"))
-            .frame(width: 90, height: 130)
-            .overlay {
-                if let url = recommendation.book.coverURL {
-                    AsyncImage(url: url) { phase in
-                        if let image = phase.image {
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        }
-                    }
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 4))
+        BookCoverView(url: recommendation.book.coverURL, title: recommendation.book.title, width: 90, height: 130)
     }
 }

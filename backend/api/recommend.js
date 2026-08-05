@@ -117,7 +117,7 @@ async function lookupBook(title, author) {
       id: item.id,
       title: info?.title ?? title,
       author: info?.authors?.[0] ?? author,
-      coverURL: info?.imageLinks?.thumbnail ?? null,
+      coverURL: info?.imageLinks?.thumbnail?.replace(/^http:/, "https:") ?? null,
       pageCount: info?.pageCount ?? null,
       genres: info?.categories ?? [],
       summary: info?.description ?? null,

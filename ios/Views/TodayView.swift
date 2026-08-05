@@ -63,11 +63,23 @@ struct TodayView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("READERS PARADISE")
-                .font(.caption).tracking(2)
-                .foregroundStyle(Color("Brass"))
-            Text("Good evening").font(.system(.title, design: .serif)).italic()
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("READERS PARADISE")
+                    .font(.caption).tracking(2)
+                    .foregroundStyle(Color("Brass"))
+                Text("Good evening").font(.system(.title, design: .serif)).italic()
+            }
+            Spacer()
+            NavigationLink {
+                MyShelfView()
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: "books.vertical")
+                    Text("My shelf").font(.caption2)
+                }
+                .foregroundStyle(Color("Ink"))
+            }
         }
         .padding(.horizontal)
     }
@@ -100,34 +112,10 @@ private struct RecommendationCard: View {
     let rec: Recommendation
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color("Forest"))
-                .frame(width: 104, height: 150)
-                .overlay {
-                    if let url = rec.book.coverURL {
-                        AsyncImage(url: url) { phase in
-                            if let image = phase.image {
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } else {
-                                titleFallback
-                            }
-                        }
-                    } else {
-                        titleFallback
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+            BookCoverView(url: rec.book.coverURL, title: rec.book.title, width: 104, height: 150)
             Text(rec.book.title).font(.caption.bold()).lineLimit(1)
             Text(rec.reason).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
         }
         .frame(width: 104)
-    }
-
-    private var titleFallback: some View {
-        Text(rec.book.title)
-            .font(.caption2.bold())
-            .foregroundStyle(.white)
-            .padding(8)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
     }
 }

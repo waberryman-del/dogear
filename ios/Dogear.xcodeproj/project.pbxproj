@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		11D82512F84BEF5AB3255AF9 /* MyShelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CDD781F4982ECA991B971D3 /* MyShelfView.swift */; };
 		12AFF6743E64F9705DD728C3 /* RecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A9F16DD3CD8D378DC9171F3 /* RecommendationEngine.swift */; };
 		38A62EFB30E62C717A02B6CE /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388C1C21E294ED14AA91D0F1 /* AppRootView.swift */; };
 		3E5267540396AB4614DC2C3F /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E2C7C1C2BF4B577E773EFB /* TodayView.swift */; };
@@ -14,6 +15,7 @@
 		58AF95D724B9D74D65C38A11 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870E944D70CCC3F2D62DD3A9 /* OnboardingView.swift */; };
 		677C57EA87DE231E5FB50D6D /* Book.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28169EC0586B53F9F89B2E7 /* Book.swift */; };
 		72F4086F52113856D4DA9D33 /* LibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D368EFF48A6CEAB5DF0A7252 /* LibraryStore.swift */; };
+		8FCD8147D6B79BE8AB84B7D1 /* BookCoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D4CE24CB190703A2597D2EE /* BookCoverView.swift */; };
 		9A2E852356CF2357705AD047 /* BookDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA778A5AF4BFC532B3CBA34A /* BookDetailView.swift */; };
 		D0759359C84DEE65A769BA28 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1221870A53B0CB57D50AE3E9 /* Assets.xcassets */; };
 		E1CC8ED3BDEC5EBF40F22F7D /* DogearApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBA93B138CDB691769D27D95 /* DogearApp.swift */; };
@@ -23,7 +25,9 @@
 /* Begin PBXFileReference section */
 		1221870A53B0CB57D50AE3E9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1B46B8408922363F8F3ED528 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		1D4CE24CB190703A2597D2EE /* BookCoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCoverView.swift; sourceTree = "<group>"; };
 		21E2C7C1C2BF4B577E773EFB /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		2CDD781F4982ECA991B971D3 /* MyShelfView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyShelfView.swift; sourceTree = "<group>"; };
 		388C1C21E294ED14AA91D0F1 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
 		5A9F16DD3CD8D378DC9171F3 /* RecommendationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationEngine.swift; sourceTree = "<group>"; };
 		870E944D70CCC3F2D62DD3A9 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -72,7 +76,9 @@
 			isa = PBXGroup;
 			children = (
 				388C1C21E294ED14AA91D0F1 /* AppRootView.swift */,
+				1D4CE24CB190703A2597D2EE /* BookCoverView.swift */,
 				DA778A5AF4BFC532B3CBA34A /* BookDetailView.swift */,
+				2CDD781F4982ECA991B971D3 /* MyShelfView.swift */,
 				870E944D70CCC3F2D62DD3A9 /* OnboardingView.swift */,
 				C773F1E1E925E5A15625A1FA /* OtherViews.swift */,
 				9B2F53441F920C23DB3E64A8 /* RootTabView.swift */,
@@ -133,7 +139,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					69D757EADC015F0A35B1E05D = {
 						ProvisioningStyle = Automatic;
@@ -177,9 +183,11 @@
 			files = (
 				38A62EFB30E62C717A02B6CE /* AppRootView.swift in Sources */,
 				677C57EA87DE231E5FB50D6D /* Book.swift in Sources */,
+				8FCD8147D6B79BE8AB84B7D1 /* BookCoverView.swift in Sources */,
 				9A2E852356CF2357705AD047 /* BookDetailView.swift in Sources */,
 				E1CC8ED3BDEC5EBF40F22F7D /* DogearApp.swift in Sources */,
 				72F4086F52113856D4DA9D33 /* LibraryStore.swift in Sources */,
+				11D82512F84BEF5AB3255AF9 /* MyShelfView.swift in Sources */,
 				58AF95D724B9D74D65C38A11 /* OnboardingView.swift in Sources */,
 				FFE1209072A046D943853A12 /* OtherViews.swift in Sources */,
 				12AFF6743E64F9705DD728C3 /* RecommendationEngine.swift in Sources */,
@@ -197,7 +205,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = U6U59A7GGT;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Generated/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -216,7 +223,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = U6U59A7GGT;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Generated/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -264,8 +270,10 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = U6U59A7GGT;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -286,6 +294,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -327,8 +336,10 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = U6U59A7GGT;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -342,6 +353,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
