@@ -27,6 +27,17 @@ final class LibraryStore: ObservableObject {
     private let shownBooksKey = "dogear.shownBooks"
     private let recommendationRowsKey = "dogear.recommendationRows"
 
+    /// Debounce guards against overlapping recommend()/vibeSearch() calls —
+    /// e.g. the app backgrounded and foregrounded in quick succession firing
+    /// Today's feed load more than once before the first call resolves. A
+    /// redundant call while one is already in flight is dropped rather than
+    /// stacking a second concurrent request, which was observed to trigger
+    /// Anthropic rate limiting under rapid repeats. Safe to check-then-set
+    /// synchronously like this since LibraryStore is @MainActor and there's
+    /// no `await` between the check and the set — no other call can interleave.
+    private var isTodayRefreshInFlight = false
+    private var isVibeSearchInFlight = false
+
     init() {
         hasCompletedOnboarding = defaults.bool(forKey: hasOnboardedKey)
         if let saved = defaults.array(forKey: onboardingGenresKey) as? [String] {
@@ -118,6 +129,12 @@ final class LibraryStore: ObservableObject {
     /// this reader's actual taste profile (decision #10) and carries forward any
     /// one-tap `refinements` already applied (decision #14).
     func vibeSearch(query: String, refinements: [String] = []) async throws -> VibeSearchResult {
+        // VibeSearchView already guards against rapid re-taps itself; this is
+        // a second, defense-in-depth line for any other caller.
+        guard !isVibeSearchInFlight else { throw LibraryStoreError.requestAlreadyInFlight }
+        isVibeSearchInFlight = true
+        defer { isVibeSearchInFlight = false }
+
         let result = try await recEngine.vibeSearch(
             query: query,
             refinements: refinements,
@@ -141,7 +158,7 @@ final class LibraryStore: ObservableObject {
     /// reader sees something immediately and it updates underneath them. Only
     /// blocks with a loading state when there's truly nothing cached to show.
     func loadTodayFeedIfNeeded() async {
-        guard !isRefreshingRecs else { return }
+        guard !isTodayRefreshInFlight else { return }
         if recommendationRows.isEmpty {
             await refreshRecommendations()
         } else {
@@ -154,8 +171,11 @@ final class LibraryStore: ObservableObject {
     }
 
     private func performRefresh(blocking: Bool) async {
+        guard !isTodayRefreshInFlight else { return }
+        isTodayRefreshInFlight = true
         if blocking { isRefreshingRecs = true }
         defer {
+            isTodayRefreshInFlight = false
             if blocking { isRefreshingRecs = false }
             hasAttemptedTodayLoad = true
         }
@@ -257,4 +277,12 @@ final class LibraryStore: ObservableObject {
             defaults.set(data, forKey: shownBooksKey)
         }
     }
+}
+
+enum LibraryStoreError: Error {
+    /// Thrown when `vibeSearch()` is called while a previous call is still
+    /// in flight — should be unreachable in normal use since VibeSearchView
+    /// guards against this itself, but is a real error rather than a silent
+    /// no-op so a bypassing caller doesn't get a misleading empty success.
+    case requestAlreadyInFlight
 }

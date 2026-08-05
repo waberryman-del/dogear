@@ -153,7 +153,12 @@ struct VibeSearchView: View {
     }
 
     private func search() {
-        guard !isQueryEmpty else { return }
+        // Debounce: ignore a rapid re-tap of submit/a refinement chip while a
+        // search is already in flight, rather than firing an overlapping
+        // request (LibraryStore.vibeSearch() also guards against this
+        // independently, but rejecting the tap here avoids even starting a
+        // Task that would just fail).
+        guard !isQueryEmpty, !isSearching else { return }
         fieldFocused = false
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         // A genuinely new query starts a fresh refinement chain; re-submitting
@@ -166,7 +171,7 @@ struct VibeSearchView: View {
     }
 
     private func applyRefinement(_ label: String) {
-        guard !appliedRefinements.contains(label) else { return }
+        guard !appliedRefinements.contains(label), !isSearching else { return }
         fieldFocused = false
         appliedRefinements.append(label)
         performSearch()
