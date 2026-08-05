@@ -125,9 +125,11 @@ async function lookupBook(title, author) {
 
 async function tryGoogleBooksQuery(query, keyParam) {
   const q = encodeURIComponent(query);
-  const resp = await fetch(
-    `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${keyParam}`
-  );
+  const url = `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${keyParam}`;
+  const resp = await fetch(url);
   const data = await resp.json();
+  if (data.error) {
+    console.error("Google Books error for query:", query, JSON.stringify(data.error));
+  }
   return data.items?.[0] ?? null;
 }
