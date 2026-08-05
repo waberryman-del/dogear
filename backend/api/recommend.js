@@ -22,8 +22,17 @@ signal, not a proxy for one:
 A book currently being read with "still_enjoying_midpoint": false is an early warning —
 treat it like a soft negative signal even though it's not finished yet.
 
+Recency: read_history and currently_reading are both ordered most-recent-first. Weight
+recent shelf placements more heavily than old ones — a reader's taste shifts over time,
+and their last few books say more about what to recommend next than their first few. If
+the recent entries trend toward a different tone, genre, or pace than the older history,
+follow that recent trend rather than averaging it in with everything that came before.
+
 Rules:
 - Never recommend a book already in their read history.
+- Never recommend a book listed in shown_books, even if it would otherwise be a strong
+  pick. shown_books is every book already surfaced to this reader by this endpoint or by
+  vibe search, whether or not they saved it — it's a hard exclusion, just like read_history.
 - If read_history is empty, lean on onboarding_genres alone — don't wait for finished
   books to make a real pick.
 - Prefer specificity over safety: real, findable, in-print books only. No invented titles.
@@ -57,17 +66,23 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "unauthorized" });
   }
 
-  const { read_history, onboarding_genres, currently_reading } = req.body ?? {};
+  const { read_history, onboarding_genres, currently_reading, shown_books } = req.body ?? {};
   if (!Array.isArray(read_history)) {
     return res.status(400).json({ error: "read_history must be an array" });
   }
 
   const historyText = read_history.length
-    ? JSON.stringify({ read_history, currently_reading: currently_reading ?? [] }, null, 2)
+    ? JSON.stringify({
+        read_history,
+        currently_reading: currently_reading ?? [],
+        shown_books: shown_books ?? [],
+        note: "read_history and currently_reading are ordered most-recent-first."
+      }, null, 2)
     : JSON.stringify({
         onboarding_genres: onboarding_genres ?? [],
+        shown_books: shown_books ?? [],
         note: "No finished books yet — recommend 6 strong, well-loved books within or " +
-              "adjacent to these genres to seed their shelf."
+              "adjacent to these genres to seed their shelf, excluding anything in shown_books."
       }, null, 2);
 
   try {

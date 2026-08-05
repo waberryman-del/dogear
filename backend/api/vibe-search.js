@@ -1,6 +1,13 @@
 // api/vibe-search.js
-// POST { query: "free text mood/vibe description" }
-// Returns { results: [{ book: {...}, reason, confidence }] }
+// POST {
+//   query: "free text mood/vibe description",
+//   refinements: [string]?,             // one-tap refinements already applied, oldest first
+//   onboarding_genres: [string]?,
+//   read_history: [{ title, author, genres, shelf_placement, why_liked }]?,  // most-recent-first
+//   currently_reading: [{ title, still_enjoying_midpoint }]?,                // most-recent-first
+//   shown_books: [string]?              // "Title by Author" exclusion list
+// }
+// Returns { results: [{ book: {...}, reason, confidence }], refinements: [string] }
 //
 // Deploy target: Vercel. Runtime: Node.js serverless function.
 // Env var required: ANTHROPIC_API_KEY (set in Vercel project settings, never in code).
@@ -14,19 +21,50 @@ reader types free text — a mood, a sentence, a feeling, a comparison to music 
 weather or a memory, not a genre or a structured query. Read past the literal words
 and find real books that match the tone, pacing, mood, and imagery being described.
 
+You are also blending that vibe with this specific reader's taste profile — never treat
+the query as a cold, context-free public book search. The same phrase from two different
+readers, with two different histories, should produce different results: filter and
+interpret the vibe through their onboarding genres, shelf placement history, and
+why-liked-it notes, exactly the way the main recommendation engine does:
+- "keepForever" = their strongest possible endorsement, weight heavily.
+- "gladIReadIt" = solid but not formative — mild positive signal.
+- "shouldveStopped" = a real negative signal (they regret finishing it) — actively avoid
+  whatever made this book similar to others, don't just ignore it.
+- A book currently being read with "still_enjoying_midpoint": false is an early warning —
+  treat it like a soft negative signal even though it's not finished yet.
+- read_history and currently_reading are ordered most-recent-first. Weight recent shelf
+  placements more heavily than old ones, and if the reader's recent picks trend toward a
+  different tone, genre, or pace than their older history, follow the recent trend rather
+  than averaging it away.
+- If read_history and onboarding_genres are both empty, interpret the query on its own —
+  there's no profile yet to blend it with.
+
+Refinements: the "refinements" array, if present, lists one-tap adjustments the reader has
+already applied on top of their original query, oldest first (e.g. ["slower", "less
+dark"]). Treat each as a real modifier layered onto the original query's intent — combine
+them with the query and with each other, don't discard or replace the original meaning.
+
 Rules:
 - Interpret tone, pacing, mood, and imagery — don't just keyword-match genre words
   that happen to appear in the query.
+- Never recommend a book already in read_history, or listed in shown_books. shown_books is
+  every book already surfaced to this reader by this endpoint or by standard
+  recommendations, whether or not they saved it — it's a hard exclusion.
 - Prefer specificity over safety: real, findable, in-print books only. No invented
   titles.
 - Return 6 books, varied enough to give the reader real choice, but every pick should
-  trace back to something specific in the query, not a generic "well-loved book"
-  fallback.
+  trace back to something specific in the query (and any refinements), filtered through
+  this reader's taste profile — not a generic "well-loved book" fallback.
 - "reason" must be one sentence, written directly to the reader ("you"), naming the
   specific connection between their query and this pick. No generic praise ("a
   wonderful read").
 - confidence is your own calibrated 0.0-1.0 estimate of fit, used only for sort order —
   never shown to the user verbatim, so don't hedge it, just be honest.
+- After picking the books, propose 2-3 short one-tap refinement labels (2-4 words each,
+  lowercase, e.g. "slower", "less dark", "more literary") that would meaningfully narrow
+  or shift these specific results if the reader tapped one. Base them on the actual query,
+  the applied refinements, and the books you just picked — not a fixed generic list — and
+  don't repeat a label already present in the input "refinements" array.
 
 Return ONLY valid JSON matching this exact shape, nothing else — no markdown fences,
 no preamble:
@@ -38,7 +76,8 @@ no preamble:
       "reason": "string",
       "confidence": 0.0
     }
-  ]
+  ],
+  "refinements": ["string"]
 }`;
 
 export default async function handler(req, res) {
@@ -50,17 +89,39 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "unauthorized" });
   }
 
-  const { query } = req.body ?? {};
+  const {
+    query,
+    refinements,
+    onboarding_genres,
+    read_history,
+    currently_reading,
+    shown_books,
+  } = req.body ?? {};
+
   if (typeof query !== "string" || !query.trim()) {
     return res.status(400).json({ error: "query is required" });
   }
 
+  const userContent = JSON.stringify(
+    {
+      query: query.trim(),
+      refinements: Array.isArray(refinements) ? refinements : [],
+      onboarding_genres: onboarding_genres ?? [],
+      read_history: read_history ?? [],
+      currently_reading: currently_reading ?? [],
+      shown_books: shown_books ?? [],
+      note: "read_history and currently_reading are ordered most-recent-first.",
+    },
+    null,
+    2
+  );
+
   try {
     const msg = await anthropic.messages.create({
       model: "claude-sonnet-5",
-      max_tokens: 1500,
+      max_tokens: 1600,
       system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: query.trim() }],
+      messages: [{ role: "user", content: userContent }],
     });
 
     const raw = msg.content.find((b) => b.type === "text")?.text ?? "{}";
@@ -77,7 +138,10 @@ export default async function handler(req, res) {
       await new Promise((r) => setTimeout(r, 250));
     }
 
-    return res.status(200).json({ results: enriched });
+    return res.status(200).json({
+      results: enriched,
+      refinements: Array.isArray(parsed.refinements) ? parsed.refinements : [],
+    });
   } catch (err) {
     console.error("vibe-search error:", err);
     return res.status(500).json({ error: "vibe search failed" });

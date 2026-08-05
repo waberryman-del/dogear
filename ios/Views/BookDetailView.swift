@@ -19,18 +19,21 @@ struct BookDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    HStack(alignment: .top, spacing: 16) {
-                        BookCoverView(url: book.coverURL, title: book.title, width: 90, height: 130)
+                    HStack(alignment: .top, spacing: DogearSpacing.space4) {
+                        BookCoverView(
+                            url: book.coverURL, title: book.title, author: book.author,
+                            width: 90, height: 130, displayMode: .aspectFit
+                        )
                         VStack(alignment: .leading, spacing: 4) {
                             Text(book.title)
-                                .font(.system(.title2, design: .serif)).italic()
+                                .font(DogearType.title).italic()
                             Text(book.author)
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DogearColor.mutedInk)
                             if let pageCount = book.pageCount {
                                 Text("\(pageCount) pages")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(DogearType.caption)
+                                    .foregroundStyle(DogearColor.mutedInk)
                             }
                         }
                         Spacer()
@@ -39,38 +42,32 @@ struct BookDetailView: View {
                     if let reason {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("WHY THIS, WHY NOW")
-                                .font(.caption).tracking(1.5)
-                                .foregroundStyle(Color("Brass"))
+                                .font(DogearType.caption).tracking(1.5)
+                                .foregroundStyle(DogearColor.brass)
                             Text(reason)
-                                .font(.body)
+                                .font(DogearType.body)
                         }
                     }
 
                     if let summary = book.summary, !summary.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("SUMMARY")
-                                .font(.caption).tracking(1.5)
-                                .foregroundStyle(Color("Brass"))
-                            Text(summary).font(.body)
+                                .font(DogearType.caption).tracking(1.5)
+                                .foregroundStyle(DogearColor.brass)
+                            Text(summary).font(DogearType.body)
                         }
                     }
 
-                    Button {
+                    DogearButton(
+                        title: isOnShelf ? "Added to your library" : "Add to shelf",
+                        isDisabled: isOnShelf
+                    ) {
                         library.addToShelf(book)
-                    } label: {
-                        Label(isOnShelf ? "Added to your library" : "Add to shelf",
-                              systemImage: isOnShelf ? "checkmark" : "plus")
-                            .frame(maxWidth: .infinity)
-                            .padding()
                     }
-                    .background(isOnShelf ? Color.gray.opacity(0.3) : Color("Forest"))
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .disabled(isOnShelf)
                 }
-                .padding()
+                .padding(DogearSpacing.space5)
             }
-            .background(Color("Linen"))
+            .background(DogearColor.paper)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }

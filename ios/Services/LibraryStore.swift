@@ -10,15 +10,25 @@ final class LibraryStore: ObservableObject {
     @Published var onboardingGenres: Set<Genre> = []   // set once, during onboarding
     @Published private(set) var hasCompletedOnboarding: Bool
 
+    /// Every book ever surfaced by either recommend() or vibeSearch(), whether
+    /// or not the reader added it — separate from `entries` (see CLAUDE.md
+    /// decision #8). Persisted so it survives relaunches, same as onboarding.
+    @Published private(set) var shownBooks: [ShownBookRecord] = []
+
     private let recEngine = RecommendationEngine()
     private let defaults = UserDefaults.standard
     private let hasOnboardedKey = "dogear.hasCompletedOnboarding"
     private let onboardingGenresKey = "dogear.onboardingGenres"
+    private let shownBooksKey = "dogear.shownBooks"
 
     init() {
         hasCompletedOnboarding = defaults.bool(forKey: hasOnboardedKey)
         if let saved = defaults.array(forKey: onboardingGenresKey) as? [String] {
             onboardingGenres = Set(saved.compactMap(Genre.init(rawValue:)))
+        }
+        if let data = defaults.data(forKey: shownBooksKey),
+           let decoded = try? JSONDecoder().decode([ShownBookRecord].self, from: data) {
+            shownBooks = decoded
         }
     }
 
@@ -84,9 +94,20 @@ final class LibraryStore: ObservableObject {
 
     /// Results are scoped to whichever screen asked — unlike `recommendations`,
     /// this isn't app-wide state, so it's just a throwing passthrough to the
-    /// service layer rather than another @Published array.
-    func vibeSearch(query: String) async throws -> [Recommendation] {
-        try await recEngine.vibeSearch(query: query)
+    /// service layer rather than another @Published array. Blends `query` with
+    /// this reader's actual taste profile (decision #10) and carries forward any
+    /// one-tap `refinements` already applied (decision #14).
+    func vibeSearch(query: String, refinements: [String] = []) async throws -> VibeSearchResult {
+        let result = try await recEngine.vibeSearch(
+            query: query,
+            refinements: refinements,
+            basedOn: entries,
+            onboardingGenres: onboardingGenres,
+            shownBooks: shownBooks
+        )
+        let filtered = filterAlreadyShown(result.results)
+        recordShown(filtered.map { $0.book })
+        return VibeSearchResult(results: filtered, suggestedRefinements: result.suggestedRefinements)
     }
 
     // MARK: - Manual refresh (the bell)
@@ -99,16 +120,51 @@ final class LibraryStore: ObservableObject {
         isRefreshingRecs = true
         defer { isRefreshingRecs = false }
         do {
-            recommendations = try await recEngine.nextPicks(
+            let picks = try await recEngine.nextPicks(
                 basedOn: entries,
-                onboardingGenres: onboardingGenres
+                onboardingGenres: onboardingGenres,
+                shownBooks: shownBooks
             )
+            let filtered = filterAlreadyShown(picks)
+            recommendations = filtered
+            recordShown(filtered.map { $0.book })
             recommendationsLoadFailed = false
         } catch {
             // Leave any existing recommendations on screen — a failed refresh should
             // never blank out picks the reader already saw. The retry state lives
             // alongside them instead.
             recommendationsLoadFailed = true
+        }
+    }
+
+    // MARK: - Shown-book exclusion (decision #8)
+
+    /// Defense in depth: even though both prompts are told to exclude
+    /// `shownBooks`, a model can still slip one through. Drop it client-side
+    /// rather than surface a book the reader has already been shown — a
+    /// shorter-than-requested batch is preferable to a repeat.
+    private func filterAlreadyShown(_ recs: [Recommendation]) -> [Recommendation] {
+        let shownKeys = Set(shownBooks.map { $0.normalizedKey })
+        return recs.filter { rec in
+            let key = ShownBookRecord.normalize(title: rec.book.title, author: rec.book.author)
+            return !shownKeys.contains(key)
+        }
+    }
+
+    private func recordShown(_ books: [Book]) {
+        var existingKeys = Set(shownBooks.map { $0.normalizedKey })
+        var newRecords: [ShownBookRecord] = []
+        for book in books {
+            let record = ShownBookRecord(id: book.id, title: book.title, author: book.author)
+            if !existingKeys.contains(record.normalizedKey) {
+                existingKeys.insert(record.normalizedKey)
+                newRecords.append(record)
+            }
+        }
+        guard !newRecords.isEmpty else { return }
+        shownBooks.append(contentsOf: newRecords)
+        if let data = try? JSONEncoder().encode(shownBooks) {
+            defaults.set(data, forKey: shownBooksKey)
         }
     }
 }

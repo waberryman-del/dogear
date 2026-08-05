@@ -75,3 +75,33 @@ struct Recommendation: Identifiable, Codable, Equatable {
     var reason: String          // AI-generated "why this, why now"
     var confidence: Double      // 0-1, used for ordering only, never shown raw
 }
+
+/// One entry per book ever surfaced by `recommend.js` or `vibe-search.js`,
+/// whether or not the reader added it — this list is deliberately separate from
+/// the reader's actual shelves (see CLAUDE.md decision #8). `normalizedKey` is
+/// how we catch the same physical book resurfacing under a different Google
+/// Books / Open Library id (different edition, different source) — raw `id`
+/// equality alone isn't reliable across the two metadata sources.
+struct ShownBookRecord: Identifiable, Codable, Equatable {
+    var id: String
+    var title: String
+    var author: String
+    var normalizedKey: String
+
+    init(id: String, title: String, author: String) {
+        self.id = id
+        self.title = title
+        self.author = author
+        self.normalizedKey = ShownBookRecord.normalize(title: title, author: author)
+    }
+
+    static func normalize(title: String, author: String) -> String {
+        let combined = "\(title)|\(author)"
+            .folding(options: .diacriticInsensitive, locale: .current)
+            .lowercased()
+        let filtered = combined.unicodeScalars.filter {
+            CharacterSet.alphanumerics.contains($0) || $0 == "|"
+        }
+        return String(String.UnicodeScalarView(filtered))
+    }
+}

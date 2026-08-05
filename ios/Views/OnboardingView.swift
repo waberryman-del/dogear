@@ -31,54 +31,34 @@ struct OnboardingView: View {
                 .padding(.horizontal)
             }
 
-            Button {
+            DogearButton(
+                title: "Continue",
+                loadingTitle: "Finding your first picks…",
+                isLoading: isSubmitting,
+                isDisabled: selected.isEmpty
+            ) {
                 let genres = selected
                 isSubmitting = true
                 Task {
                     await library.completeOnboarding(genres: genres)
                     isSubmitting = false
                 }
-            } label: {
-                HStack {
-                    if isSubmitting {
-                        ProgressView().tint(.white)
-                    }
-                    Text(isSubmitting ? "Finding your first picks…" : "Continue")
-                        .font(.headline)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(selected.isEmpty ? Color.gray.opacity(0.4) : Color("Forest"))
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
-            .disabled(selected.isEmpty || isSubmitting)
             .padding(.horizontal)
             .padding(.bottom)
         }
-        .background(Color("Linen").ignoresSafeArea())
+        .background(DogearColor.paper.ignoresSafeArea())
     }
 
     private func genreChip(_ genre: Genre) -> some View {
         let isSelected = selected.contains(genre)
-        return Text(genre.rawValue)
-            .font(.subheadline.weight(.medium))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .background(isSelected ? Color("Forest") : Color.white.opacity(0.6))
-            .foregroundStyle(isSelected ? .white : Color("Ink"))
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color("Brass").opacity(isSelected ? 0 : 0.3), lineWidth: 1)
-            )
-            .onTapGesture {
-                if isSelected {
-                    selected.remove(genre)
-                } else if selected.count < maxSelectable {
-                    selected.insert(genre)
-                }
+        return DogearChip(label: genre.rawValue, isSelected: isSelected) {
+            if isSelected {
+                selected.remove(genre)
+            } else if selected.count < maxSelectable {
+                selected.insert(genre)
             }
+        }
+        .frame(maxWidth: .infinity)
     }
 }

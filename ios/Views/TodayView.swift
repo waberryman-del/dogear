@@ -3,22 +3,25 @@ import SwiftUI
 struct TodayView: View {
     @EnvironmentObject var library: LibraryStore
     @State private var selectedRecommendation: Recommendation?
+    @State private var showVibeSearch = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: DogearSpacing.space6) {
                     header
-
+                    vibeSearchEntry
                     sectionHeader("For you tonight")
-
                     content
                 }
-                .padding(.vertical)
+                .padding(.vertical, DogearSpacing.space6)
             }
-            .background(Color("Linen"))
+            .background(DogearColor.paper)
             .toolbar(.hidden, for: .navigationBar)
             .task { await library.ringTheBell() }
+            .navigationDestination(isPresented: $showVibeSearch) {
+                VibeSearchView()
+            }
             .sheet(item: $selectedRecommendation) { rec in
                 BookDetailView(book: rec.book, reason: rec.reason)
                     .environmentObject(library)
@@ -29,82 +32,68 @@ struct TodayView: View {
     @ViewBuilder
     private var content: some View {
         if library.isRefreshingRecs && library.recommendations.isEmpty {
-            HStack {
-                Spacer()
-                ProgressView("Finding your next reads…")
-                Spacer()
-            }
-            .padding(.vertical, 40)
+            LoadingStateView(message: "Finding your next reads…")
         } else if library.recommendationsLoadFailed && library.recommendations.isEmpty {
-            VStack(spacing: 12) {
-                Text("Couldn't reach your library's brain.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Button("Retry") { Task { await library.ringTheBell() } }
-                    .font(.caption.bold())
-                    .padding(.horizontal, 16).padding(.vertical, 8)
-                    .background(Color("Forest"))
-                    .foregroundStyle(.white)
-                    .clipShape(Capsule())
+            ErrorStateView(message: "Couldn't reach your library's brain.") {
+                Task { await library.ringTheBell() }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 32)
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 14) {
+                HStack(spacing: DogearSpacing.space4) {
                     ForEach(library.recommendations) { rec in
                         RecommendationCard(rec: rec)
                             .onTapGesture { selectedRecommendation = rec }
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, DogearSpacing.space5)
             }
         }
     }
 
     private var header: some View {
         HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: DogearSpacing.space1) {
                 Text("READERS PARADISE")
-                    .font(.caption).tracking(2)
-                    .foregroundStyle(Color("Brass"))
-                Text("Good evening").font(.system(.title, design: .serif)).italic()
+                    .font(DogearType.caption).tracking(2)
+                    .foregroundStyle(DogearColor.brass)
+                Text("Good evening").font(DogearType.titleItalic)
             }
             Spacer()
-            HStack(spacing: 20) {
-                NavigationLink {
-                    VibeSearchView()
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: "magnifyingglass")
-                        Text("Vibe search").font(.caption2)
-                    }
-                    .foregroundStyle(Color("Ink"))
+            NavigationLink {
+                MyShelfView()
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: "books.vertical")
+                    Text("My shelf").font(DogearType.caption)
                 }
-                NavigationLink {
-                    MyShelfView()
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: "books.vertical")
-                        Text("My shelf").font(.caption2)
-                    }
-                    .foregroundStyle(Color("Ink"))
-                }
+                .foregroundStyle(DogearColor.ink)
             }
         }
-        .padding(.horizontal)
+        .padding(.horizontal, DogearSpacing.space5)
     }
 
-    /// The manual "ring the bell" refresh — a real, named UI element per CLAUDE.md
-    /// decision #4, not a hidden pull-to-refresh gesture.
+    /// Confirmed entry point: a prominent tappable row styled with
+    /// VibePromptField, not a small icon buried in the header — navigates to
+    /// VibeSearchView via a hidden nav destination since the field itself owns
+    /// the tap target (nesting it inside a NavigationLink label would let the
+    /// field's internal button eat the tap instead).
+    private var vibeSearchEntry: some View {
+        VibePromptField(
+            placeholder: "What are you in the mood for?",
+            mode: .staticPrompt(onTap: { showVibeSearch = true })
+        )
+        .padding(.horizontal, DogearSpacing.space5)
+    }
+
     private func sectionHeader(_ title: String) -> some View {
         HStack {
-            Text(title).font(.system(.title3, design: .serif)).italic()
+            Text(title).font(DogearType.title.italic())
             Spacer()
             Button {
                 Task { await library.ringTheBell() }
             } label: {
                 Image(systemName: "bell")
+                    .foregroundStyle(DogearColor.brass)
                     .rotationEffect(.degrees(library.isRefreshingRecs ? -20 : 0))
                     .animation(
                         library.isRefreshingRecs
@@ -115,6 +104,6 @@ struct TodayView: View {
             }
             .disabled(library.isRefreshingRecs)
         }
-        .padding(.horizontal)
+        .padding(.horizontal, DogearSpacing.space5)
     }
 }
