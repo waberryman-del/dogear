@@ -54,6 +54,13 @@ final class LibraryStore: ObservableObject {
         ))
     }
 
+    /// Undo for `addToShelf` — the only shelf-entry lifecycle that exists before
+    /// Phase 3's start-reading/finish flows land, so this simply removes the
+    /// entry outright rather than trying to model an in-between state.
+    func removeFromShelf(_ bookID: String) {
+        entries.removeAll { $0.book.id == bookID }
+    }
+
     func startReading(_ bookID: String) {
         guard let idx = entries.firstIndex(where: { $0.book.id == bookID }) else { return }
         entries[idx].status = .reading
@@ -72,9 +79,9 @@ final class LibraryStore: ObservableObject {
     func answerMidpointCheckIn(_ bookID: String, stillEnjoying: Bool) {
         guard let idx = entries.firstIndex(where: { $0.book.id == bookID }) else { return }
         entries[idx].midpointCheckIn?.stillEnjoying = stillEnjoying
-        // Deliberately does NOT trigger a recommendation refresh — refresh is earned by
-        // finishing/shelving a book, or by the manual bell. A check-in is a signal for
-        // the *next* recommend() call, not a refresh trigger itself.
+        // Deliberately does NOT trigger a recommendation refresh — refresh is earned only
+        // by finishing/shelving a book. A check-in is a signal for the *next* recommend()
+        // call, not a refresh trigger itself.
     }
 
     // MARK: - Finishing a book — shelf placement IS the rating
@@ -110,9 +117,17 @@ final class LibraryStore: ObservableObject {
         return VibeSearchResult(results: filtered, suggestedRefinements: result.suggestedRefinements)
     }
 
-    // MARK: - Manual refresh (the bell)
+    // MARK: - Today's feed
 
-    func ringTheBell() async {
+    /// Today has no manual refresh control (decision #4, amended) — new picks
+    /// are earned only by shelving a book (`placeOnShelf`), which calls
+    /// `refreshRecommendations()` directly. This is just the cold-start/retry
+    /// path: recommendations aren't persisted across launches yet (pending the
+    /// Phase 3 SwiftData migration), so Today needs a way to populate itself
+    /// the first time it appears, and to recover after a failed load — neither
+    /// of which is a "refresh" in the earned sense, just filling an empty feed.
+    func loadTodayFeedIfNeeded() async {
+        guard recommendations.isEmpty, !isRefreshingRecs else { return }
         await refreshRecommendations()
     }
 

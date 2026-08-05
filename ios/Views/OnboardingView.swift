@@ -15,9 +15,10 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("What do you read?")
                     .font(.system(.largeTitle, design: .serif)).italic()
+                    .foregroundStyle(DogearColor.ink)
                 Text("Pick up to \(maxSelectable) — we'll use these to find your first recommendations.")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DogearColor.mutedInk)
             }
             .padding(.horizontal)
             .padding(.top)

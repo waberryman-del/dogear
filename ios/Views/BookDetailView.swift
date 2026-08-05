@@ -27,6 +27,7 @@ struct BookDetailView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(book.title)
                                 .font(DogearType.title).italic()
+                                .foregroundStyle(DogearColor.ink)
                             Text(book.author)
                                 .font(.subheadline)
                                 .foregroundStyle(DogearColor.mutedInk)
@@ -46,6 +47,7 @@ struct BookDetailView: View {
                                 .foregroundStyle(DogearColor.brass)
                             Text(reason)
                                 .font(DogearType.body)
+                                .foregroundStyle(DogearColor.ink)
                         }
                     }
 
@@ -54,15 +56,21 @@ struct BookDetailView: View {
                             Text("SUMMARY")
                                 .font(DogearType.caption).tracking(1.5)
                                 .foregroundStyle(DogearColor.brass)
-                            Text(summary).font(DogearType.body)
+                            Text(summary)
+                                .font(DogearType.body)
+                                .foregroundStyle(DogearColor.ink)
                         }
                     }
 
                     DogearButton(
-                        title: isOnShelf ? "Added to your library" : "Add to shelf",
-                        isDisabled: isOnShelf
+                        title: isOnShelf ? "Remove from shelf" : "Add to shelf",
+                        tint: isOnShelf ? DogearColor.rust : DogearColor.forest
                     ) {
-                        library.addToShelf(book)
+                        if isOnShelf {
+                            library.removeFromShelf(book.id)
+                        } else {
+                            library.addToShelf(book)
+                        }
                     }
                 }
                 .padding(DogearSpacing.space5)

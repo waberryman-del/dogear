@@ -1,17 +1,15 @@
 import SwiftUI
 
+/// Decision #12: only Today and Find exist as tabs until Archive/Vault/You are
+/// real, useful destinations — no empty placeholder tabs.
 struct RootTabView: View {
     var body: some View {
         TabView {
             TodayView()
                 .tabItem { Label("Today", systemImage: "sparkles") }
-            ArchiveView()
-                .tabItem { Label("Archive", systemImage: "books.vertical") }
-            VaultView()
-                .tabItem { Label("Vault", systemImage: "quote.bubble") }
-            ProfileView()
-                .tabItem { Label("Profile", systemImage: "person.crop.circle") }
+            VibeSearchView()
+                .tabItem { Label("Find", systemImage: "magnifyingglass") }
         }
-        .tint(Color("Forest")) // define in Assets: deep forest green
+        .tint(DogearColor.forest)
     }
 }

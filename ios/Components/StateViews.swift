@@ -41,6 +41,7 @@ struct ErrorStateView: View {
                 .background(DogearColor.forest)
                 .foregroundStyle(DogearColor.paper)
                 .clipShape(Capsule())
+                .buttonStyle(DogearPressStyle())
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, DogearSpacing.space8)
@@ -64,6 +65,7 @@ struct InlineRetryBanner: View {
             Button("Retry", action: action)
                 .font(DogearType.caption.weight(.semibold))
                 .foregroundStyle(DogearColor.forest)
+                .buttonStyle(DogearPressStyle())
         }
         .padding(.horizontal, DogearSpacing.space5)
     }

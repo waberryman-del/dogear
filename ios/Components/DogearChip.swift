@@ -24,6 +24,6 @@ struct DogearChip: View {
                         .stroke(DogearColor.brass.opacity(isSelected ? 0 : 0.3), lineWidth: 1)
                 )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(DogearPressStyle())
     }
 }

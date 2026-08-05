@@ -22,6 +22,7 @@ struct VibeSearchView: View {
     @State private var hasSearched = false
     @State private var selectedResult: Recommendation?
     @State private var exampleIndex = 0
+    @FocusState private var fieldFocused: Bool
 
     private let exampleQueries = [
         "It just started raining.",
@@ -31,22 +32,24 @@ struct VibeSearchView: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DogearSpacing.space6) {
-                header
-                promptField
-                if !hasSearched && !isSearching {
-                    examplePrompt
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DogearSpacing.space6) {
+                    header
+                    promptField
+                    if !hasSearched && !isSearching {
+                        examplePrompt
+                    }
+                    content
                 }
-                content
+                .padding(.vertical, DogearSpacing.space6)
             }
-            .padding(.vertical, DogearSpacing.space6)
-        }
-        .background(DogearColor.paper)
-        .navigationTitle("Vibe search")
-        .sheet(item: $selectedResult) { rec in
-            BookDetailView(book: rec.book, reason: rec.reason)
-                .environmentObject(library)
+            .background(DogearColor.paper)
+            .navigationTitle("Vibe search")
+            .sheet(item: $selectedResult) { rec in
+                BookDetailView(book: rec.book, reason: rec.reason)
+                    .environmentObject(library)
+            }
         }
     }
 
@@ -57,12 +60,13 @@ struct VibeSearchView: View {
                 .foregroundStyle(DogearColor.brass)
             Text("What are you in the mood for?")
                 .font(DogearType.titleItalic)
+                .foregroundStyle(DogearColor.ink)
         }
         .padding(.horizontal, DogearSpacing.space5)
     }
 
     private var promptField: some View {
-        VibePromptField(mode: .editable(text: $query, onSubmit: search))
+        VibePromptField(mode: .editable(text: $query, isFocused: $fieldFocused, onSubmit: search))
             .padding(.horizontal, DogearSpacing.space5)
     }
 
@@ -80,7 +84,7 @@ struct VibeSearchView: View {
                     .foregroundStyle(DogearColor.mutedInk)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(DogearPressStyle())
         .padding(.horizontal, DogearSpacing.space5)
         .id(exampleIndex)
         .transition(.opacity)
@@ -123,14 +127,9 @@ struct VibeSearchView: View {
     }
 
     private var resultsGrid: some View {
-        let columns = [GridItem(.adaptive(minimum: 104), spacing: DogearSpacing.space4)]
-        return LazyVGrid(columns: columns, spacing: DogearSpacing.space5) {
-            ForEach(results) { rec in
-                RecommendationCard(rec: rec)
-                    .onTapGesture { selectedResult = rec }
-            }
+        RecommendationGrid(recommendations: results) { rec in
+            selectedResult = rec
         }
-        .padding(.horizontal, DogearSpacing.space5)
     }
 
     private var refinementRow: some View {
@@ -155,6 +154,7 @@ struct VibeSearchView: View {
 
     private func search() {
         guard !isQueryEmpty else { return }
+        fieldFocused = false
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         // A genuinely new query starts a fresh refinement chain; re-submitting
         // the same text (e.g. after a failure) keeps whatever was already applied.
@@ -167,6 +167,7 @@ struct VibeSearchView: View {
 
     private func applyRefinement(_ label: String) {
         guard !appliedRefinements.contains(label) else { return }
+        fieldFocused = false
         appliedRefinements.append(label)
         performSearch()
     }

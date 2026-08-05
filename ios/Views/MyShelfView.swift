@@ -15,14 +15,18 @@ struct MyShelfView: View {
             } else {
                 LazyVGrid(columns: columns, spacing: 20) {
                     ForEach(library.entries) { entry in
-                        ShelfEntryCard(entry: entry)
-                            .onTapGesture { selectedEntry = entry }
+                        Button {
+                            selectedEntry = entry
+                        } label: {
+                            ShelfEntryCard(entry: entry)
+                        }
+                        .buttonStyle(DogearPressStyle())
                     }
                 }
                 .padding()
             }
         }
-        .background(Color("Linen"))
+        .background(DogearColor.paper)
         .navigationTitle("My shelf")
         .sheet(item: $selectedEntry) { entry in
             BookDetailView(book: entry.book)
@@ -34,9 +38,10 @@ struct MyShelfView: View {
         VStack(spacing: 8) {
             Text("Nothing on your shelf yet")
                 .font(.system(.title3, design: .serif)).italic()
+                .foregroundStyle(DogearColor.ink)
             Text("Add a book from Today to see it here.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DogearColor.mutedInk)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80)
@@ -49,8 +54,14 @@ private struct ShelfEntryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             BookCoverView(url: entry.book.coverURL, title: entry.book.title, width: 100, height: 146)
-            Text(entry.book.title).font(.caption.bold()).lineLimit(2)
-            Text(entry.book.author).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+            Text(entry.book.title)
+                .font(.caption.bold())
+                .foregroundStyle(DogearColor.ink)
+                .lineLimit(2)
+            Text(entry.book.author)
+                .font(.caption2)
+                .foregroundStyle(DogearColor.mutedInk)
+                .lineLimit(1)
         }
         .frame(width: 100)
     }

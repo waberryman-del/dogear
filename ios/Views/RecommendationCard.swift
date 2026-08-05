@@ -7,8 +7,14 @@ struct RecommendationCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             BookCoverView(url: rec.book.coverURL, title: rec.book.title, width: 104, height: 150)
-            Text(rec.book.title).font(.caption.bold()).lineLimit(1)
-            Text(rec.reason).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+            Text(rec.book.title)
+                .font(.caption.bold())
+                .foregroundStyle(DogearColor.ink)
+                .lineLimit(1)
+            Text(rec.reason)
+                .font(.caption2)
+                .foregroundStyle(DogearColor.mutedInk)
+                .lineLimit(2)
         }
         .frame(width: 104)
     }

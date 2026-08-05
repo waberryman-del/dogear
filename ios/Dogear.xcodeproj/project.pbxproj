@@ -27,6 +27,7 @@
 		9A2E852356CF2357705AD047 /* BookDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA778A5AF4BFC532B3CBA34A /* BookDetailView.swift */; };
 		BE6DF395AE809B7EDDC92AA2 /* Spacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDE17B4346A1DF9B84CE8CF /* Spacing.swift */; };
 		C6AF9E2B67FB556AB0F7305F /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF13DB9134922F21AE8E6542 /* StateViews.swift */; };
+		D021A5C5C689E1989A2EEA82 /* RecommendationGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE00C107C2C38F6FEE7C1E59 /* RecommendationGrid.swift */; };
 		D0759359C84DEE65A769BA28 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1221870A53B0CB57D50AE3E9 /* Assets.xcassets */; };
 		E1CC8ED3BDEC5EBF40F22F7D /* DogearApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBA93B138CDB691769D27D95 /* DogearApp.swift */; };
 		F2D9B3F7964F3E3ABAC6A4B6 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = F647FD8AA8FB7BF21F6B4E47 /* Typography.swift */; };
@@ -49,6 +50,7 @@
 		9B2F53441F920C23DB3E64A8 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
 		9D38E5D411645DA14B0AF51A /* Dogear.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Dogear.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A4B2B8ADE8BAB132AEE6AB8A /* DogearButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DogearButton.swift; sourceTree = "<group>"; };
+		AE00C107C2C38F6FEE7C1E59 /* RecommendationGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationGrid.swift; sourceTree = "<group>"; };
 		B4C50BF150706FFE909DAB55 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
 		C28169EC0586B53F9F89B2E7 /* Book.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
 		C773F1E1E925E5A15625A1FA /* OtherViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherViews.swift; sourceTree = "<group>"; };
@@ -119,6 +121,7 @@
 			children = (
 				A4B2B8ADE8BAB132AEE6AB8A /* DogearButton.swift */,
 				3AA3C2B3FCF9D998576CAF09 /* DogearChip.swift */,
+				AE00C107C2C38F6FEE7C1E59 /* RecommendationGrid.swift */,
 				CF13DB9134922F21AE8E6542 /* StateViews.swift */,
 				9899110BC1BBCA03FDAD41FC /* VibePromptField.swift */,
 			);
@@ -253,6 +256,7 @@
 				08B6C2B359DA511F8B6CF3C1 /* Radius.swift in Sources */,
 				2922FB03A48C45097C9A4DA1 /* RecommendationCard.swift in Sources */,
 				12AFF6743E64F9705DD728C3 /* RecommendationEngine.swift in Sources */,
+				D021A5C5C689E1989A2EEA82 /* RecommendationGrid.swift in Sources */,
 				487FFA5B5A3A396C7B07F04B /* RootTabView.swift in Sources */,
 				BE6DF395AE809B7EDDC92AA2 /* Spacing.swift in Sources */,
 				C6AF9E2B67FB556AB0F7305F /* StateViews.swift in Sources */,
