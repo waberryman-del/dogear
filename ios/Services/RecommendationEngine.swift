@@ -13,9 +13,18 @@ struct RecommendationEngine {
     private let baseURL = URL(string: "https://dogear-teal.vercel.app/api")!
     private let sharedSecret = "dogear12345"
 
-    private func makeRequest(path: String, body: [String: Any]) throws -> URLRequest {
+    /// No explicit timeout here previously meant relying on `URLSession.shared`'s
+    /// default (`timeoutIntervalForRequest`, nominally 60s) — which on-device
+    /// testing showed the client giving up around ~24s even though the backend
+    /// was still measured taking 27-35s to actually finish successfully. Rather
+    /// than trust an implicit platform default that clearly wasn't behaving as
+    /// documented, `timeout` is now explicit per call and always set above the
+    /// corresponding endpoint's `vercel.json` maxDuration, so the client never
+    /// gives up on a request that would have succeeded.
+    private func makeRequest(path: String, body: [String: Any], timeout: TimeInterval) throws -> URLRequest {
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
         request.httpMethod = "POST"
+        request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(sharedSecret, forHTTPHeaderField: "X-App-Secret")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -73,7 +82,9 @@ struct RecommendationEngine {
             "shown_books": shownBooksPayload(shownBooks)
         ]
 
-        let request = try makeRequest(path: "recommend", body: payload)
+        // recommend.js's vercel.json maxDuration is 60s — 75s gives real
+        // headroom so the client always outlasts the server's own hard cap.
+        let request = try makeRequest(path: "recommend", body: payload, timeout: 75)
         let (data, _) = try await URLSession.shared.data(for: request)
         let decoded = try JSONDecoder().decode(RecommendationResponse.self, from: data)
         return decoded.rows
@@ -100,19 +111,21 @@ struct RecommendationEngine {
             "shown_books": shownBooksPayload(shownBooks)
         ]
 
-        let request = try makeRequest(path: "vibe-search", body: payload)
+        // Same 60s vercel.json maxDuration as recommend.js — same 75s headroom.
+        let request = try makeRequest(path: "vibe-search", body: payload, timeout: 75)
         let (data, _) = try await URLSession.shared.data(for: request)
         let decoded = try JSONDecoder().decode(VibeSearchResponse.self, from: data)
         return VibeSearchResult(results: decoded.results, suggestedRefinements: decoded.refinements)
     }
 
     func generateWhyYouLikedIt(for entry: LibraryEntry) async throws -> String {
+        // why-liked-it.js's vercel.json maxDuration is 15s — 20s headroom.
         let request = try makeRequest(path: "why-liked-it", body: [
             "title": entry.book.title,
             "shelf_placement": entry.shelfPlacement?.rawValue ?? "gladIReadIt",
             "still_enjoying_midpoint": (entry.midpointCheckIn?.stillEnjoying as Any?) ?? NSNull(),
             "highlights": entry.highlights.map { $0.text }
-        ])
+        ], timeout: 20)
         let (data, _) = try await URLSession.shared.data(for: request)
         let decoded = try JSONDecoder().decode([String: String].self, from: data)
         return decoded["note"] ?? ""
