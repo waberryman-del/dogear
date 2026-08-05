@@ -108,6 +108,49 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
    reason well about this specific reader/query," take the slower, better-reasoned
    path. This is explicitly the thing meant to beat other book trackers — don't let
    it regress to generic genre-matching to save time.
+8. **Never recommend a book the reader has already been shown**, not just books
+   already on their shelf. Maintain a persisted, growing list of every book ID ever
+   surfaced by either `recommend.js` or `vibe-search.js` (call it something like
+   `shownBookIDs` in `LibraryStore`), sent as an explicit exclusion list on every
+   request to both endpoints. "Already read" and "already shown" are two different
+   lists — a book can be shown and passed over without being added, and it still
+   shouldn't come back.
+9. **Reading history sent to the backend must be recency-ordered, and the prompts
+   must say so explicitly** — e.g. "entries below are ordered most-recent-first;
+   weight recent shelf placements more heavily than old ones, and if the pattern
+   is shifting (e.g. recent picks trend toward a different tone/genre than older
+   ones), follow the recent trend, not the historical average." This applies to
+   `recommend.js`'s existing prompt too, not just new work — it currently doesn't
+   say anything about recency and should.
+10. **Vibe search must blend the typed query with the reader's actual taste
+    profile**, not interpret it as a cold, context-free phrase. `vibe-search.js`
+    needs the same profile inputs `recommend.js` gets (onboarding genres, shelf
+    placement history, why-liked-it notes) alongside the free-text query, and its
+    system prompt should explicitly instruct the model to filter/interpret the
+    vibe through that specific reader's taste — "atmospheric and slow" should
+    produce different results for two readers with different histories.
+11. **Vibe Search is entered prominently from Today**, not buried in a secondary
+    menu, and not (yet) its own tab. It should feel central to the product.
+12. **Do not implement the full five-tab navigation** (Today / Find / Archive /
+    Vault / You, per the design system) until Archive, Vault, and You are real,
+    useful destinations. No empty placeholder tabs.
+13. **The initial Vibe Search interface is free text only.** No genre dropdowns,
+    filters, sliders, or structured controls beside the text field, ever, at entry.
+14. **Contextual one-tap refinements** (e.g. "slower," "less dark," "more
+    literary") may appear only *after* results are returned — generated/selected
+    based on the original query and current results, not a permanent generic
+    filter set. Tapping one refines the existing query while preserving the
+    original search context — this should feel like refining a request with a
+    trusted bookseller, not applying database filters.
+15. **The Dogear Design System (`docs/Dogear_Design_System_v0_1_1_.docx` in this
+    repo) is the source of truth for all visual and interaction design** — colors,
+    typography, spacing, radii, motion, haptics, component anatomy, and screen
+    specs. Do not invent new visual patterns when the system already documents
+    one. If a screen genuinely conflicts with the system, that's a flag to raise
+    explicitly, not a silent deviation.
+16. **Do not begin Phase 3 work** (shelf placement, SwiftData persistence
+    migration, midpoint check-in, fold gesture) during this Vibe Search /
+    design-system pass, even if it looks like a small, related change.
 
 ## Design identity
 - **Palette**: unchanged from the earlier prototype and still the right call — deep
