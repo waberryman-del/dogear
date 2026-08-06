@@ -76,11 +76,27 @@ struct RecommendationEngine {
             }
     }
 
-    /// "Title by Author" strings — readable to the model, unlike the opaque
-    /// Google Books / Open Library ids `ShownBookRecord.id` actually holds
-    /// (decision #8).
-    private func shownBooksPayload(_ shownBooks: [ShownBookRecord]) -> [String] {
-        shownBooks.map { "\($0.title) by \($0.author)" }
+    /// Structured {title, author} objects, in the order they were shown
+    /// (oldest first — `LibraryStore` only ever appends) — decision #8's
+    /// amended scarcity fallback backfills from the oldest end of this list,
+    /// so the ordering itself is load-bearing, not incidental. Previously
+    /// sent as flat "Title by Author" strings; structured objects are what
+    /// the backend needs to actually re-look-up and reuse one of these as a
+    /// backfilled recommendation, not just quote it back to Claude for
+    /// exclusion.
+    private func shownBooksPayload(_ shownBooks: [ShownBookRecord]) -> [[String: String]] {
+        shownBooks.map { ["title": $0.title, "author": $0.author] }
+    }
+
+    /// Every entry on the reader's shelf regardless of status (want-to-read,
+    /// reading, finished, dnf) — decision #8 (amended): these are a hard,
+    /// permanent exclusion with no scarcity-fallback exception, unlike
+    /// `shown_books`, which the backend may backfill from when genuinely
+    /// exhausted. The backend needs this as a separate list because
+    /// `shown_books` doesn't indicate which entries were ever added to the
+    /// shelf — it only tracks what was surfaced.
+    private func shelvedBooksPayload(from library: [LibraryEntry]) -> [[String: String]] {
+        library.map { ["title": $0.book.title, "author": $0.book.author] }
     }
 
     /// Returns Today's feed as labeled rows (decision #19) rather than a flat
@@ -95,7 +111,8 @@ struct RecommendationEngine {
             "onboarding_genres": onboardingGenres.map { $0.rawValue },
             "read_history": readHistoryPayload(from: library),
             "currently_reading": currentlyReadingPayload(from: library),
-            "shown_books": shownBooksPayload(shownBooks)
+            "shown_books": shownBooksPayload(shownBooks),
+            "shelved_books": shelvedBooksPayload(from: library)
         ]
 
         // recommend.js's vercel.json maxDuration is 60s — 75s gives real
@@ -128,7 +145,8 @@ struct RecommendationEngine {
             "onboarding_genres": onboardingGenres.map { $0.rawValue },
             "read_history": readHistoryPayload(from: library),
             "currently_reading": currentlyReadingPayload(from: library),
-            "shown_books": shownBooksPayload(shownBooks)
+            "shown_books": shownBooksPayload(shownBooks),
+            "shelved_books": shelvedBooksPayload(from: library)
         ]
 
         // Same 60s vercel.json maxDuration as recommend.js — same 75s headroom.

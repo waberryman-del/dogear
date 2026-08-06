@@ -66,7 +66,6 @@ struct HeroReadingCard: View {
                         Text(entry.book.title)
                             .font(DogearType.rowLabelItalic)
                             .foregroundStyle(DogearColor.ink)
-                            .lineLimit(2)
                         Text(entry.book.author)
                             .font(DogearType.bodySmall)
                             .foregroundStyle(DogearColor.mutedInk)

@@ -57,7 +57,6 @@ private struct ShelfEntryCard: View {
             Text(entry.book.title)
                 .font(.caption.bold())
                 .foregroundStyle(DogearColor.ink)
-                .lineLimit(2)
             Text(entry.book.author)
                 .font(.caption2)
                 .foregroundStyle(DogearColor.mutedInk)

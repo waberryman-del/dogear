@@ -42,7 +42,6 @@ struct RecommendationRowView: View {
             Text(row.label)
                 .font(DogearType.rowLabelItalic)
                 .foregroundStyle(DogearColor.ink)
-                .lineLimit(2)
         }
         .padding(.horizontal, DogearSpacing.space5)
     }

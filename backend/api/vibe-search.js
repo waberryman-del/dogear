@@ -5,7 +5,8 @@
 //   onboarding_genres: [string]?,
 //   read_history: [{ title, author, genres, shelf_placement, why_liked }]?,  // most-recent-first
 //   currently_reading: [{ title, still_enjoying_midpoint }]?,                // most-recent-first
-//   shown_books: [string]?              // "Title by Author" exclusion list
+//   shown_books: [{ title, author }]?   // exclusion list, oldest-shown first
+//   shelved_books: [{ title, author }]? // every shelf entry, any status — hard exclusion, never backfilled from
 // }
 // Returns { results: [{ book: {...}, reason, confidence }], refinements: [string] }
 //
@@ -65,9 +66,13 @@ them with the query and with each other, don't discard or replace the original m
 Rules:
 - Interpret tone, pacing, mood, and imagery — don't just keyword-match genre words
   that happen to appear in the query.
-- Never recommend a book already in read_history, or listed in shown_books. shown_books is
-  every book already surfaced to this reader by this endpoint or by standard
-  recommendations, whether or not they saved it — it's a hard exclusion.
+- Never recommend a book already in read_history, in shelved_books, or in shown_books.
+  shelved_books is every book on the reader's shelf in any status (want-to-read, reading,
+  finished, dnf) — a permanent, absolute exclusion, no exceptions. shown_books is every
+  book already surfaced to this reader by this endpoint or by standard recommendations,
+  whether or not they saved it — also a hard exclusion for you to respect; the backend
+  (not you) may occasionally backfill an old shown_books entry itself when genuinely
+  exhausted, but that's a fallback outside your own picks, not something to reason about.
 - Prefer specificity over safety: real, findable, in-print books only. No invented
   titles.
 - Return 5-6 books when you can find them, varied enough to give the reader real choice,
@@ -192,6 +197,44 @@ async function generateResultsWithRetry(userContent) {
   }
 }
 
+// CLAUDE.md decision #8 (amended): a shelved book (any status) is never
+// backfilled, no exceptions — the default for a shown-but-not-shelved book is
+// also still never-repeat, but if a request still comes up short of the
+// floor even after the retry above, backfill remaining slots from the
+// OLDEST shown_books entries (least-recently-shown first) rather than
+// returning a thin/empty result. `shownBooks` is already in oldest-first
+// order (the client only ever appends), so a plain left-to-right scan is
+// "oldest first" — no separate sort needed.
+function backfillFromShownBooks(currentResults, shownBooks, shelvedBooks, needed) {
+  if (needed <= 0 || !Array.isArray(shownBooks)) return [];
+
+  const bookKey = (title, author) =>
+    `${(title ?? "").toLowerCase().trim()}|${(author ?? "").toLowerCase().trim()}`;
+
+  const shelvedKeys = new Set(
+    (Array.isArray(shelvedBooks) ? shelvedBooks : []).map((b) => bookKey(b?.title, b?.author))
+  );
+  const pickedKeys = new Set(currentResults.map((r) => bookKey(r.title, r.author)));
+
+  const backfilled = [];
+  for (const entry of shownBooks) {
+    if (backfilled.length >= needed) break;
+    const title = entry?.title;
+    const author = entry?.author;
+    if (!title || !author) continue;
+    const key = bookKey(title, author);
+    if (shelvedKeys.has(key) || pickedKeys.has(key)) continue;
+    pickedKeys.add(key);
+    backfilled.push({
+      title,
+      author,
+      reason: "You saw this one before and it's still one of the strongest fits here.",
+      confidence: 0.5,
+    });
+  }
+  return backfilled;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
@@ -208,6 +251,7 @@ export default async function handler(req, res) {
     read_history,
     currently_reading,
     shown_books,
+    shelved_books,
   } = req.body ?? {};
 
   if (typeof query !== "string" || !query.trim()) {
@@ -222,6 +266,7 @@ export default async function handler(req, res) {
       read_history: read_history ?? [],
       currently_reading: currently_reading ?? [],
       shown_books: shown_books ?? [],
+      shelved_books: shelved_books ?? [],
       note: "read_history and currently_reading are ordered most-recent-first.",
     },
     null,
@@ -232,8 +277,21 @@ export default async function handler(req, res) {
     const { results: rawResults, refinements: rawRefinements } =
       await generateResultsWithRetry(userContent);
 
+    let finalResults = rawResults;
+    if (finalResults.length < MIN_RESULTS) {
+      const needed = MIN_RESULTS - finalResults.length;
+      const backfilled = backfillFromShownBooks(finalResults, shown_books, shelved_books, needed);
+      if (backfilled.length > 0) {
+        console.log(
+          `vibe-search scarcity fallback fired: backfilling ${backfilled.length} book(s) ` +
+          `from oldest shown_books (had ${finalResults.length}, needed ${MIN_RESULTS})`
+        );
+        finalResults = [...finalResults, ...backfilled];
+      }
+    }
+
     const enriched = await mapWithConcurrency(
-      rawResults,
+      finalResults,
       LOOKUP_CONCURRENCY,
       async (rec) => ({
         book: await safeLookupBook(rec.title, rec.author),

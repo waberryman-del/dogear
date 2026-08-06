@@ -10,7 +10,6 @@ struct RecommendationCard: View {
             Text(rec.book.title)
                 .font(.caption.bold())
                 .foregroundStyle(DogearColor.ink)
-                .lineLimit(1)
             Text(rec.reason)
                 .font(.caption2)
                 .foregroundStyle(DogearColor.mutedInk)

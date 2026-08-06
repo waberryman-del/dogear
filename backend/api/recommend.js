@@ -1,5 +1,5 @@
 // api/recommend.js
-// POST { read_history, onboarding_genres, currently_reading, shown_books }
+// POST { read_history, onboarding_genres, currently_reading, shown_books, shelved_books }
 // Returns { rows: [{ label, kind: "taste"|"discovery", recommendations: [{ book, reason, confidence }] }] }
 //
 // Deploy target: Vercel. Runtime: Node.js serverless function.
@@ -57,10 +57,14 @@ the recent entries trend toward a different tone, genre, or pace than the older 
 follow that recent trend rather than averaging it in with everything that came before.
 
 Rules:
-- Never recommend a book already in their read history.
+- Never recommend a book already in their read history or in shelved_books. shelved_books
+  is every book on the reader's shelf in any status (want-to-read, reading, finished,
+  dnf) — a permanent, absolute exclusion, no exceptions.
 - Never recommend a book listed in shown_books, even if it would otherwise be a strong
   pick. shown_books is every book already surfaced to this reader by this endpoint or by
-  vibe search, whether or not they saved it — it's a hard exclusion, just like read_history.
+  vibe search, whether or not they saved it — also a hard exclusion for you to respect;
+  the backend (not you) may occasionally backfill an old shown_books entry itself when a
+  row is genuinely exhausted, but that's a fallback outside your own picks.
 - Prefer specificity over safety: real, findable, in-print books only. No invented titles.
 - Return 5-6 books for this row when you can find them; 4 is the acceptable floor if
   shown_books has genuinely exhausted every reasonable match — reaching for that floor too
@@ -172,7 +176,50 @@ what counts as "the same pattern" — rather than returning few or no books. The
 exclusions do not change: still never recommend anything in read_history or shown_books.
 Only how broadly you interpret the pattern itself should loosen. Return 4-6 books.`;
 
-async function generateRowWithRetry(assignment, historyText) {
+// CLAUDE.md decision #8 (amended): a shelved book (any status) is never
+// backfilled, no exceptions — the default for a shown-but-not-shelved book is
+// also still never-repeat, but if a row still comes up short of the floor
+// even after the retry below, backfill remaining slots from the OLDEST
+// shown_books entries (least-recently-shown first) rather than returning a
+// thin/empty row. `shownBooks` is already in oldest-first order (the client
+// only ever appends), so a plain left-to-right scan is "oldest first". Rows
+// run concurrently (Promise.allSettled below), so `usedKeys` is a shared,
+// synchronously-mutated Set across all three calls — safe because nothing
+// awaits between reading and marking a key used, but necessary: without it,
+// two independently-short rows could both reach for the same oldest
+// shown_books entry and lose it to the handler's later cross-row dedup.
+function backfillFromShownBooks(currentResults, shownBooks, shelvedBooks, needed, usedKeys) {
+  if (needed <= 0 || !Array.isArray(shownBooks)) return [];
+
+  const bookKey = (title, author) =>
+    `${(title ?? "").toLowerCase().trim()}|${(author ?? "").toLowerCase().trim()}`;
+
+  const shelvedKeys = new Set(
+    (Array.isArray(shelvedBooks) ? shelvedBooks : []).map((b) => bookKey(b?.title, b?.author))
+  );
+  const pickedKeys = new Set(currentResults.map((r) => bookKey(r.title, r.author)));
+
+  const backfilled = [];
+  for (const entry of shownBooks) {
+    if (backfilled.length >= needed) break;
+    const title = entry?.title;
+    const author = entry?.author;
+    if (!title || !author) continue;
+    const key = bookKey(title, author);
+    if (shelvedKeys.has(key) || pickedKeys.has(key) || usedKeys.has(key)) continue;
+    pickedKeys.add(key);
+    usedKeys.add(key);
+    backfilled.push({
+      title,
+      author,
+      reason: "You saw this one before and it's still one of the strongest fits here.",
+      confidence: 0.5,
+    });
+  }
+  return backfilled;
+}
+
+async function generateRowWithRetry(assignment, historyText, shownBooks, shelvedBooks, usedBackfillKeys) {
   // CONFIRMED root cause (reproduced against production: 12 titles of
   // shown_books + read_history produced only 1 of 3 rows). Same bug as
   // vibe-search.js: the first attempt here was never wrapped in try/catch —
@@ -194,26 +241,43 @@ async function generateRowWithRetry(assignment, historyText) {
       `Row (${assignment.kind}) first attempt threw, retrying with a broadened prompt:`,
       err?.message
     );
-    return generateRow(retryAssignment, historyText);
+    first = null;
   }
 
-  if (first.recommendations.length >= MIN_BOOKS_PER_ROW) {
-    return first;
+  let result;
+  if (first && first.recommendations.length >= MIN_BOOKS_PER_ROW) {
+    result = first;
+  } else {
+    if (first) {
+      console.log(
+        `Row (${assignment.kind}) returned ${first.recommendations.length} books on the ` +
+        `first attempt, retrying with a broadened prompt`
+      );
+    }
+    try {
+      const retry = await generateRow(retryAssignment, historyText);
+      // Keep whichever attempt did better — the retry is meant to recover,
+      // not to unconditionally replace a first attempt that was already fine.
+      result = (!first || retry.recommendations.length > first.recommendations.length) ? retry : first;
+    } catch (err) {
+      console.error(`Retry for row (${assignment.kind}) failed:`, err?.message);
+      result = first ?? { kind: assignment.kind, label: "More you might like", recommendations: [], claudeMs: 0 };
+    }
   }
 
-  console.log(
-    `Row (${assignment.kind}) returned ${first.recommendations.length} books on the ` +
-    `first attempt, retrying with a broadened prompt`
-  );
-  try {
-    const retry = await generateRow(retryAssignment, historyText);
-    // Keep whichever attempt did better — the retry is meant to recover, not
-    // to unconditionally replace a first attempt that was already fine.
-    return retry.recommendations.length > first.recommendations.length ? retry : first;
-  } catch (err) {
-    console.error(`Retry for row (${assignment.kind}) failed:`, err?.message);
-    return first;
+  if (result.recommendations.length < MIN_BOOKS_PER_ROW) {
+    const needed = MIN_BOOKS_PER_ROW - result.recommendations.length;
+    const backfilled = backfillFromShownBooks(result.recommendations, shownBooks, shelvedBooks, needed, usedBackfillKeys);
+    if (backfilled.length > 0) {
+      console.log(
+        `Row (${assignment.kind}) scarcity fallback fired: backfilling ${backfilled.length} book(s) ` +
+        `from oldest shown_books (had ${result.recommendations.length}, needed ${MIN_BOOKS_PER_ROW})`
+      );
+      result = { ...result, recommendations: [...result.recommendations, ...backfilled] };
+    }
   }
+
+  return result;
 }
 
 export default async function handler(req, res) {
@@ -225,7 +289,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "unauthorized" });
   }
 
-  const { read_history, onboarding_genres, currently_reading, shown_books } = req.body ?? {};
+  const { read_history, onboarding_genres, currently_reading, shown_books, shelved_books } = req.body ?? {};
   if (!Array.isArray(read_history)) {
     return res.status(400).json({ error: "read_history must be an array" });
   }
@@ -235,13 +299,15 @@ export default async function handler(req, res) {
         read_history,
         currently_reading: currently_reading ?? [],
         shown_books: shown_books ?? [],
+        shelved_books: shelved_books ?? [],
         note: "read_history and currently_reading are ordered most-recent-first."
       }, null, 2)
     : JSON.stringify({
         onboarding_genres: onboarding_genres ?? [],
         shown_books: shown_books ?? [],
+        shelved_books: shelved_books ?? [],
         note: "No finished books yet — ground taste rows in these genres and still " +
-              "include one discovery row, excluding anything in shown_books."
+              "include one discovery row, excluding anything in shown_books or shelved_books."
       }, null, 2);
 
   try {
@@ -250,9 +316,13 @@ export default async function handler(req, res) {
     // row's call failing (parse error, API hiccup) doesn't take the other
     // two down with it; we return whatever succeeded rather than 500ing the
     // whole feed over one row. Each call retries itself once (see
-    // generateRowWithRetry) if it comes back short or empty.
+    // generateRowWithRetry) if it comes back short or empty, then backfills
+    // from shown_books if it's still short after that (decision #8, amended).
+    const usedBackfillKeys = new Set();
     const settled = await Promise.allSettled(
-      ROW_ASSIGNMENTS.map((assignment) => generateRowWithRetry(assignment, historyText))
+      ROW_ASSIGNMENTS.map((assignment) =>
+        generateRowWithRetry(assignment, historyText, shown_books, shelved_books, usedBackfillKeys)
+      )
     );
 
     const successfulRows = [];

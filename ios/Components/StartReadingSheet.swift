@@ -81,7 +81,6 @@ struct StartReadingSheet: View {
                     Text(book.title)
                         .font(DogearType.label)
                         .foregroundStyle(DogearColor.ink)
-                        .lineLimit(1)
                     Text(book.author)
                         .font(DogearType.caption)
                         .foregroundStyle(DogearColor.mutedInk)

@@ -56,7 +56,6 @@ struct BookCoverView: View {
                 Text(title)
                     .font(.system(size: 11, weight: .semibold, design: .serif))
                     .foregroundStyle(DogearColor.ink)
-                    .lineLimit(3)
                 if let author {
                     Text(author)
                         .font(.system(size: 9, weight: .regular))
