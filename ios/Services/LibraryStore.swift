@@ -160,7 +160,11 @@ final class LibraryStore: ObservableObject {
         )
         let filtered = filterAlreadyShown(result.results)
         recordShown(filtered.map { $0.book })
-        return VibeSearchResult(results: filtered, suggestedRefinements: result.suggestedRefinements)
+        return VibeSearchResult(
+            results: filtered,
+            suggestedRefinements: result.suggestedRefinements,
+            rawResultCount: result.rawResultCount
+        )
     }
 
     // MARK: - Today's feed

@@ -18,6 +18,12 @@ struct VibePromptField: View {
 
     var placeholder: String = "What are you in the mood for?"
     var mode: Mode
+    /// Drives a visible pulse on the submit arrow. Needs to be state on this
+    /// view (not just a press-style effect on the arrow's own Button) because
+    /// submitting via the keyboard's return/search key — the more common path
+    /// once the field is focused — never touches the arrow's Button at all,
+    /// so a haptic alone there was invisible on that path.
+    @State private var arrowPulsing = false
 
     var body: some View {
         switch mode {
@@ -45,9 +51,9 @@ struct VibePromptField: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .focused(isFocused)
                 .submitLabel(.search)
-                .onSubmit(onSubmit)
+                .onSubmit { triggerSubmit(onSubmit) }
 
-            submitArrow(action: onSubmit, disabled: isEmpty)
+            submitArrow(action: { triggerSubmit(onSubmit) }, disabled: isEmpty)
         }
         .padding(.horizontal, DogearSpacing.space4)
         .padding(.vertical, DogearSpacing.space3)
@@ -85,16 +91,25 @@ struct VibePromptField: View {
         .buttonStyle(DogearPressStyle())
     }
 
+    /// Fires the haptic and a visible arrow pulse regardless of which path
+    /// triggered submission (direct tap or keyboard return), then calls
+    /// through to the real submit action.
+    private func triggerSubmit(_ onSubmit: @escaping () -> Void) {
+        DogearHaptics.actionArmed()
+        withAnimation(DogearMotion.quick) { arrowPulsing = true }
+        withAnimation(DogearMotion.quick.delay(0.08)) { arrowPulsing = false }
+        onSubmit()
+    }
+
     private func submitArrow(action: @escaping () -> Void, disabled: Bool) -> some View {
-        Button(action: {
-            DogearHaptics.actionArmed()
-            action()
-        }) {
+        Button(action: action) {
             Image(systemName: "arrow.up")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(DogearColor.paper)
                 .frame(width: 40, height: 40)
                 .background(Circle().fill(DogearColor.forest))
+                .scaleEffect(arrowPulsing ? 0.8 : 1)
+                .opacity(arrowPulsing ? 0.7 : 1)
         }
         .buttonStyle(DogearPressStyle())
         .disabled(disabled)

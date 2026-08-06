@@ -136,7 +136,11 @@ struct RecommendationEngine {
         let data = try await send(request, endpoint: "vibe-search")
         do {
             let decoded = try JSONDecoder().decode(VibeSearchResponse.self, from: data)
-            return VibeSearchResult(results: decoded.results, suggestedRefinements: decoded.refinements)
+            return VibeSearchResult(
+                results: decoded.results,
+                suggestedRefinements: decoded.refinements,
+                rawResultCount: decoded.results.count
+            )
         } catch {
             print("[RecommendationEngine] vibe-search decode failed: \(error) — raw: \(String(data: data, encoding: .utf8) ?? "<non-utf8>")")
             throw error
@@ -171,6 +175,11 @@ enum BackendError: LocalizedError {
 struct VibeSearchResult {
     let results: [Recommendation]
     let suggestedRefinements: [String]
+    /// Count before `LibraryStore`'s shownBooks exclusion filter runs — lets
+    /// the UI tell "the backend genuinely found nothing" apart from "it found
+    /// results but every one was already shown," which need different, honest
+    /// copy rather than one generic empty-state message.
+    let rawResultCount: Int
 }
 
 private struct RecommendationResponse: Codable {

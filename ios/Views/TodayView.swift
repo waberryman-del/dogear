@@ -10,12 +10,22 @@ import SwiftUI
 struct TodayView: View {
     @EnvironmentObject var library: LibraryStore
     @State private var selectedRecommendation: Recommendation?
+    /// Distinct from `library.isRefreshingRecs`, which stays false for the
+    /// silent background refresh `loadTodayFeedIfNeeded()` does on every
+    /// appearance — this only tracks the explicit pull gesture, which is
+    /// deliberately loud instead: a request the reader triggered on purpose,
+    /// taking ~15-20s, needs a real "something is happening" state, not just
+    /// the small native pull-spinner with no copy.
+    @State private var isPullRefreshing = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: DogearSpacing.space8) {
                     header
+                    if isPullRefreshing {
+                        refreshingBanner
+                    }
                     HeroReadingCard()
                     content
                 }
@@ -25,7 +35,9 @@ struct TodayView: View {
             .toolbar(.hidden, for: .navigationBar)
             .task { await library.loadTodayFeedIfNeeded() }
             .refreshable {
+                isPullRefreshing = true
                 await library.loadTodayFeedIfNeeded()
+                isPullRefreshing = false
                 if library.recommendationsLoadFailed {
                     DogearHaptics.failure()
                 } else {
@@ -69,6 +81,16 @@ struct TodayView: View {
                 }
             }
         }
+    }
+
+    private var refreshingBanner: some View {
+        HStack(spacing: DogearSpacing.space2) {
+            ProgressView()
+            Text("Finding new books for you…")
+                .font(DogearType.bodySmall)
+                .foregroundStyle(DogearColor.mutedInk)
+        }
+        .padding(.horizontal, DogearSpacing.space5)
     }
 
     private var exhaustedState: some View {

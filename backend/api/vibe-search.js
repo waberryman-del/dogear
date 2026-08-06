@@ -70,9 +70,12 @@ Rules:
   recommendations, whether or not they saved it — it's a hard exclusion.
 - Prefer specificity over safety: real, findable, in-print books only. No invented
   titles.
-- Return 6 books, varied enough to give the reader real choice, but every pick should
-  trace back to something specific in the query (and any refinements), filtered through
-  this reader's taste profile — not a generic "well-loved book" fallback.
+- Return 5-6 books when you can find them, varied enough to give the reader real choice,
+  but every pick should trace back to something specific in the query (and any
+  refinements), filtered through this reader's taste profile — not a generic "well-loved
+  book" fallback. 3 is the acceptable floor if shown_books has genuinely exhausted every
+  reasonable match for this vibe — reaching for that floor too early instead of broadening
+  your interpretation of the vibe is the wrong tradeoff.
 - "reason" must be one sentence, written directly to the reader ("you"), naming the
   specific connection between their query and this pick. No generic praise ("a
   wonderful read").
@@ -97,6 +100,66 @@ no preamble:
   ],
   "refinements": ["string"]
 }`;
+
+// Mirrors recommend.js's MIN_BOOKS_PER_ROW / generateRowWithRetry pattern —
+// this endpoint had no floor check or retry at all before, unlike recommend.js,
+// which is most of why a growing shown_books list was starving vibe-search
+// results harder than Today's rows. Floor of 3 matches the design doc's
+// documented "Return 3-6 books" range (Section 13) rather than an invented number.
+const MIN_RESULTS = 3;
+
+const BROADEN_RETRY_HINT = `
+
+RETRY NOTE: Your first attempt returned too few books, most likely because shown_books is
+large. For this attempt, allow slightly broader matches within the same vibe and taste
+blend — related subgenres, adjacent authors, a looser reading of the mood — rather than
+returning a short list. The hard exclusions do not change: still never recommend anything
+in read_history or shown_books. Only how broadly you interpret the vibe itself should
+loosen. Return 5-6 books.`;
+
+async function generateResults(userContent, systemPrompt) {
+  const msg = await anthropic.messages.create({
+    model: "claude-sonnet-5",
+    max_tokens: 1600,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userContent }],
+  });
+
+  const raw = msg.content.find((b) => b.type === "text")?.text ?? "{}";
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (parseErr) {
+    console.error("Failed to parse Claude response as JSON:", parseErr.message, "raw:", raw);
+    throw parseErr;
+  }
+
+  return {
+    results: parsed.results ?? [],
+    refinements: Array.isArray(parsed.refinements) ? parsed.refinements : [],
+  };
+}
+
+async function generateResultsWithRetry(userContent) {
+  const first = await generateResults(userContent, SYSTEM_PROMPT);
+  if (first.results.length >= MIN_RESULTS) {
+    return first;
+  }
+
+  console.log(
+    `vibe-search returned ${first.results.length} books on the first attempt, ` +
+    `retrying with a broadened prompt`
+  );
+  try {
+    const retry = await generateResults(userContent, SYSTEM_PROMPT + BROADEN_RETRY_HINT);
+    // Keep whichever attempt did better — the retry is meant to recover, not
+    // to unconditionally replace a first attempt that was already fine.
+    return retry.results.length > first.results.length ? retry : first;
+  } catch (err) {
+    console.error("vibe-search retry failed:", err?.message);
+    return first;
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -135,24 +198,11 @@ export default async function handler(req, res) {
   );
 
   try {
-    const msg = await anthropic.messages.create({
-      model: "claude-sonnet-5",
-      max_tokens: 1600,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userContent }],
-    });
-
-    const raw = msg.content.find((b) => b.type === "text")?.text ?? "{}";
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch (parseErr) {
-      console.error("Failed to parse Claude response as JSON:", parseErr.message, "raw:", raw);
-      throw parseErr;
-    }
+    const { results: rawResults, refinements: rawRefinements } =
+      await generateResultsWithRetry(userContent);
 
     const enriched = await mapWithConcurrency(
-      parsed.results ?? [],
+      rawResults,
       LOOKUP_CONCURRENCY,
       async (rec) => ({
         book: await safeLookupBook(rec.title, rec.author),
@@ -163,7 +213,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       results: enriched,
-      refinements: Array.isArray(parsed.refinements) ? parsed.refinements : [],
+      refinements: rawRefinements,
     });
   } catch (err) {
     console.error("vibe-search error:", err);

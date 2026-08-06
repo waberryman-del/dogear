@@ -62,7 +62,10 @@ Rules:
   pick. shown_books is every book already surfaced to this reader by this endpoint or by
   vibe search, whether or not they saved it — it's a hard exclusion, just like read_history.
 - Prefer specificity over safety: real, findable, in-print books only. No invented titles.
-- Return 4-6 books for this row.
+- Return 5-6 books for this row when you can find them; 4 is the acceptable floor if
+  shown_books has genuinely exhausted every reasonable match — reaching for that floor too
+  early instead of broadening your interpretation of the pattern triggers a slower retry,
+  so aim for 5-6 up front.
 - "reason" must be one sentence, written directly to the reader ("you"), naming the
   specific pattern that earned this pick. No generic praise ("a wonderful read").
 - confidence is your own calibrated 0.0-1.0 estimate of fit, used only for sort order —

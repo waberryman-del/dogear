@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Phase 2 spec: free text only, no genre dropdown alongside it — the text box IS
 /// the whole interface. Reuses RecommendationCard + BookDetailView from Today
@@ -20,6 +21,10 @@ struct VibeSearchView: View {
     @State private var isSearching = false
     @State private var searchFailed = false
     @State private var hasSearched = false
+    /// True when the backend actually returned matches but every one of them
+    /// had already been shown before — distinct from a genuine zero-match
+    /// search, which needs different, honest copy (see `content`).
+    @State private var resultsExhaustedByExclusion = false
     @State private var selectedResult: Recommendation?
     @State private var exampleIndex = 0
     @FocusState private var fieldFocused: Bool
@@ -49,6 +54,24 @@ struct VibeSearchView: View {
             }
             .background(DogearColor.paper)
             .navigationTitle("Vibe search")
+            // TIMING instrumentation for the reported keyboard-appear delay —
+            // the rotating-timer-pause fix went in unverified last round.
+            // Rather than guess again, this logs real timestamps for the
+            // focus-state change and the two system keyboard notifications so
+            // the actual gap (and which side of it — SwiftUI focus handling
+            // vs. the system's own keyboard animation — is responsible) shows
+            // up in the console next time this is reproduced on-device.
+            .onChange(of: fieldFocused) { _, newValue in
+                if newValue {
+                    print("[VibeSearch][TIMING] fieldFocused=true at \(Self.timingTimestamp())")
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                print("[VibeSearch][TIMING] keyboardWillShow at \(Self.timingTimestamp())")
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+                print("[VibeSearch][TIMING] keyboardDidShow at \(Self.timingTimestamp())")
+            }
             .sheet(item: $selectedResult) { rec in
                 BookDetailView(book: rec.book, reason: rec.reason)
                     .environmentObject(library)
@@ -139,7 +162,9 @@ struct VibeSearchView: View {
                 }
             }
         } else if hasSearched {
-            Text("Try describing the feeling rather than the plot.")
+            Text(resultsExhaustedByExclusion
+                ? "You've already discovered our best matches for this — try a different angle."
+                : "Try describing the feeling rather than the plot.")
                 .font(DogearType.bodySmall)
                 .foregroundStyle(DogearColor.mutedInk)
                 .padding(.horizontal, DogearSpacing.space5)
@@ -242,6 +267,7 @@ struct VibeSearchView: View {
                 let result = try await library.vibeSearch(query: lastSearchedQuery, refinements: appliedRefinements)
                 results = result.results
                 suggestedRefinements = result.suggestedRefinements.filter { !appliedRefinements.contains($0) }
+                resultsExhaustedByExclusion = result.results.isEmpty && result.rawResultCount > 0
                 hasSearched = true
             } catch {
                 print("[VibeSearchView] search failed: \(error)")
@@ -250,5 +276,12 @@ struct VibeSearchView: View {
             }
             isSearching = false
         }
+    }
+
+    /// Monotonic (not wall-clock, so it's immune to NTP jumps) millisecond
+    /// timestamp for the TIMING logs above — subtract two of these to get a
+    /// real, reliable delta between the tap and the keyboard actually appearing.
+    private static func timingTimestamp() -> String {
+        String(format: "%.1fms", ProcessInfo.processInfo.systemUptime * 1000)
     }
 }
