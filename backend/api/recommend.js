@@ -1,9 +1,18 @@
 // api/recommend.js
-// POST { read_history, onboarding_genres, currently_reading, shown_books, shelved_books }
+// POST { read_history, onboarding_genres, currently_reading, shown_books, shelved_books, not_interested }
 // Returns { rows: [{ label, kind: "taste"|"discovery", recommendations: [{ book, reason, confidence }] }] }
 //
 // Deploy target: Vercel. Runtime: Node.js serverless function.
 // Env var required: ANTHROPIC_API_KEY (set in Vercel project settings, never in code).
+//
+// CLAUDE.md decision #25: this endpoint no longer powers Today (that's
+// daily-picks.js now, decision #24) — it powers Search's default
+// AI-personalized row-browsing content instead. The taxonomy/retry/backfill
+// engine below wasn't rewritten for the move, just relocated, per decision
+// #25's "same engine... just relocated from Today to Search." Left named
+// "recommend.js" deliberately (renaming was weighed and declined — real
+// value near zero, coordination risk real given this pivot's size); this
+// comment is the naming-debt marker for a future quieter pass.
 
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -49,6 +58,12 @@ signal, not a proxy for one:
   whatever made this book similar to others, don't just ignore it.
 A book currently being read with "still_enjoying_midpoint": false is an early warning —
 treat it like a soft negative signal even though it's not finished yet.
+
+not_interested is a separate, real but moderate negative signal (decision #27) — books
+the reader explicitly dismissed from a Today daily pick without ever adding them to
+their shelf. Weaker than "shouldveStopped" (they never even started it), but still a
+genuine push away from whatever pattern made that pick land wrong for them. Factor it
+into your row picks the same way you factor in shelf placement, just weighted lighter.
 
 Recency: read_history and currently_reading are both ordered most-recent-first. Weight
 recent shelf placements more heavily than old ones — a reader's taste shifts over time,
@@ -289,7 +304,9 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "unauthorized" });
   }
 
-  const { read_history, onboarding_genres, currently_reading, shown_books, shelved_books } = req.body ?? {};
+  const {
+    read_history, onboarding_genres, currently_reading, shown_books, shelved_books, not_interested,
+  } = req.body ?? {};
   if (!Array.isArray(read_history)) {
     return res.status(400).json({ error: "read_history must be an array" });
   }
@@ -300,12 +317,14 @@ export default async function handler(req, res) {
         currently_reading: currently_reading ?? [],
         shown_books: shown_books ?? [],
         shelved_books: shelved_books ?? [],
+        not_interested: not_interested ?? [],
         note: "read_history and currently_reading are ordered most-recent-first."
       }, null, 2)
     : JSON.stringify({
         onboarding_genres: onboarding_genres ?? [],
         shown_books: shown_books ?? [],
         shelved_books: shelved_books ?? [],
+        not_interested: not_interested ?? [],
         note: "No finished books yet — ground taste rows in these genres and still " +
               "include one discovery row, excluding anything in shown_books or shelved_books."
       }, null, 2);

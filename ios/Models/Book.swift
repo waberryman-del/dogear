@@ -133,3 +133,33 @@ struct ShownBookRecord: Identifiable, Codable, Equatable {
         return String(String.UnicodeScalarView(filtered))
     }
 }
+
+/// Decision #26/#27: the binary choice on one of Today's daily picks.
+/// "wantToRead" adds the book to the shelf (never auto-starts reading — that
+/// stays a separate, deliberate action from My Shelf, decision #26).
+/// "notInterested" is a real but moderate negative signal, weaker than
+/// "shouldveStopped" on a finished book, tracked distinctly from shelf
+/// placements since a dismissed book was never shelved at all.
+enum DailyPickDecision: String, Codable {
+    case wantToRead
+    case notInterested
+}
+
+/// A book the reader explicitly dismissed from a Today daily pick (decision
+/// #27) — structurally mirrors `ShownBookRecord` (same normalization, same
+/// "different edition/source id" problem) but is a semantically different
+/// signal: this is a moderate negative taste signal for future generations
+/// to reason about, not just an exclusion record.
+struct NotInterestedRecord: Identifiable, Codable, Equatable {
+    var id: String
+    var title: String
+    var author: String
+    var normalizedKey: String
+
+    init(id: String, title: String, author: String) {
+        self.id = id
+        self.title = title
+        self.author = author
+        self.normalizedKey = ShownBookRecord.normalize(title: title, author: author)
+    }
+}

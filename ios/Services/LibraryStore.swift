@@ -20,12 +20,38 @@ final class LibraryStore: ObservableObject {
     /// decision #8). Persisted so it survives relaunches, same as onboarding.
     @Published private(set) var shownBooks: [ShownBookRecord] = []
 
+    // MARK: - Today's daily picks (decision #24, #26, #27)
+
+    /// Exactly 3 (once generated), or empty before today's batch has loaded.
+    @Published private(set) var todaysPicks: [Recommendation] = []
+    /// Keyed by `Recommendation.book.id`. A pick with no entry here is
+    /// undecided.
+    @Published private(set) var todaysPickDecisions: [String: DailyPickDecision] = [:]
+    /// The calendar day `todaysPicks` was generated for — compared against
+    /// `Calendar.current` (decision: local calendar day, not a rolling 24h
+    /// window) to decide whether a fresh batch is due.
+    @Published private(set) var todaysPicksDate: Date?
+    @Published var isLoadingTodaysPicks = false
+    @Published var todaysPicksLoadFailed = false
+
+    /// Decision #27: books explicitly dismissed from a daily pick — a real
+    /// but moderate negative signal, distinct from shelf placements, fed to
+    /// both `daily-picks.js` and `recommend.js` (Search's rows) so both
+    /// reason about it. Not a hard client-side exclusion list itself — the
+    /// book is already covered by `shownBooks`'s hard exclusion the moment
+    /// it's generated as a pick, regardless of how the reader decides on it.
+    @Published private(set) var notInterestedBooks: [NotInterestedRecord] = []
+
     private let recEngine = RecommendationEngine()
     private let defaults = UserDefaults.standard
     private let hasOnboardedKey = "dogear.hasCompletedOnboarding"
     private let onboardingGenresKey = "dogear.onboardingGenres"
     private let shownBooksKey = "dogear.shownBooks"
     private let recommendationRowsKey = "dogear.recommendationRows"
+    private let todaysPicksKey = "dogear.todaysPicks"
+    private let todaysPickDecisionsKey = "dogear.todaysPickDecisions"
+    private let todaysPicksDateKey = "dogear.todaysPicksDate"
+    private let notInterestedBooksKey = "dogear.notInterestedBooks"
 
     /// CONFIRMED bug (found via live console capture, not assumption): this
     /// used to be a bare Bool guard (`isTodayRefreshInFlight`) shared across
@@ -61,6 +87,24 @@ final class LibraryStore: ObservableObject {
         if let data = defaults.data(forKey: recommendationRowsKey),
            let decoded = try? JSONDecoder().decode([RecommendationRow].self, from: data) {
             recommendationRows = decoded
+        }
+        if let data = defaults.data(forKey: notInterestedBooksKey),
+           let decoded = try? JSONDecoder().decode([NotInterestedRecord].self, from: data) {
+            notInterestedBooks = decoded
+        }
+        // Today's picks + decisions + the date they were generated for all
+        // load together — `loadTodaysPicksIfNeeded()` is what decides
+        // whether this cached batch is still today's or needs replacing.
+        if let data = defaults.data(forKey: todaysPicksKey),
+           let decoded = try? JSONDecoder().decode([Recommendation].self, from: data) {
+            todaysPicks = decoded
+        }
+        if let data = defaults.data(forKey: todaysPickDecisionsKey),
+           let decoded = try? JSONDecoder().decode([String: DailyPickDecision].self, from: data) {
+            todaysPickDecisions = decoded
+        }
+        if let timestamp = defaults.object(forKey: todaysPicksDateKey) as? Date {
+            todaysPicksDate = timestamp
         }
     }
 
@@ -175,16 +219,107 @@ final class LibraryStore: ObservableObject {
         )
     }
 
-    // MARK: - Today's feed
+    // MARK: - Today's daily picks (decision #24, #26, #27)
 
-    /// Today has no manual refresh control (decision #4, amended) — new picks
-    /// are earned only by shelving a book (`placeOnShelf`), which calls
-    /// `performRefresh(blocking: true)` directly. This is the cold-start/retry path,
-    /// called each time Today appears. If a cached batch from last session is
-    /// already showing (see `init()`), this refreshes it silently in the
-    /// background rather than blocking the UI on a fresh network call — the
-    /// reader sees something immediately and it updates underneath them. Only
-    /// blocks with a loading state when there's truly nothing cached to show.
+    var allTodaysPicksDecided: Bool {
+        !todaysPicks.isEmpty && todaysPicks.allSatisfy { todaysPickDecisions[$0.book.id] != nil }
+    }
+
+    /// Generates a fresh 3 once per local calendar day (confirmed: local
+    /// `Calendar.current`, not a rolling 24h window) — a no-op if today's
+    /// batch already exists, decided or not. Any picks still undecided when
+    /// a new day arrives become an implicit skip: recorded into `shownBooks`
+    /// so they don't resurface, but never counted as an explicit "not
+    /// interested" signal — that's reserved for an actual decision.
+    func loadTodaysPicksIfNeeded() async {
+        if let date = todaysPicksDate, Calendar.current.isDateInToday(date) {
+            return
+        }
+        if !todaysPicks.isEmpty {
+            let undecided = todaysPicks.filter { todaysPickDecisions[$0.book.id] == nil }
+            recordShown(undecided.map { $0.book })
+        }
+
+        isLoadingTodaysPicks = true
+        todaysPicksLoadFailed = false
+        defer { isLoadingTodaysPicks = false }
+
+        do {
+            let picks = try await recEngine.dailyPicks(
+                basedOn: entries,
+                onboardingGenres: onboardingGenres,
+                shownBooks: shownBooks,
+                notInterestedBooks: notInterestedBooks
+            )
+            todaysPicks = picks
+            todaysPickDecisions = [:]
+            todaysPicksDate = Calendar.current.startOfDay(for: .now)
+            recordShown(picks.map { $0.book })
+            persistTodaysPicks()
+        } catch {
+            print("[LibraryStore] Today's picks load failed: \(error)")
+            todaysPicksLoadFailed = true
+        }
+    }
+
+    /// "wantToRead" adds to the shelf — never auto-starts reading, starting
+    /// is always a separate, deliberate action from My Shelf (decision #26).
+    /// "notInterested" records a moderate negative signal (decision #27),
+    /// tracked distinctly from shelf placements since this book was never
+    /// shelved at all.
+    func decideTodaysPick(_ bookID: String, decision: DailyPickDecision) {
+        guard let pick = todaysPicks.first(where: { $0.book.id == bookID }) else { return }
+        todaysPickDecisions[bookID] = decision
+        persistTodaysPickDecisions()
+
+        switch decision {
+        case .wantToRead:
+            addToShelf(pick.book, status: .wantToRead)
+        case .notInterested:
+            recordNotInterested(pick.book)
+        }
+    }
+
+    private func recordNotInterested(_ book: Book) {
+        let key = ShownBookRecord.normalize(title: book.title, author: book.author)
+        guard !notInterestedBooks.contains(where: { $0.normalizedKey == key }) else { return }
+        notInterestedBooks.append(NotInterestedRecord(id: book.id, title: book.title, author: book.author))
+        persistNotInterestedBooks()
+    }
+
+    private func persistTodaysPicks() {
+        if let data = try? JSONEncoder().encode(todaysPicks) {
+            defaults.set(data, forKey: todaysPicksKey)
+        }
+        defaults.set(todaysPicksDate, forKey: todaysPicksDateKey)
+    }
+
+    private func persistTodaysPickDecisions() {
+        if let data = try? JSONEncoder().encode(todaysPickDecisions) {
+            defaults.set(data, forKey: todaysPickDecisionsKey)
+        }
+    }
+
+    private func persistNotInterestedBooks() {
+        if let data = try? JSONEncoder().encode(notInterestedBooks) {
+            defaults.set(data, forKey: notInterestedBooksKey)
+        }
+    }
+
+    // MARK: - Search's row-browsing engine (decision #25 — this used to be
+    // "Today's feed"; the underlying engine/state below wasn't rewritten, it
+    // was relocated. Names below (e.g. `loadTodayFeedIfNeeded`) are known
+    // naming debt from that move, left as-is deliberately to avoid a large,
+    // risky rename mid-pivot — worth a quieter follow-up pass later.
+
+    /// Search's row content has no manual refresh control of its own beyond
+    /// pull-to-refresh — new picks are also earned whenever a book is placed
+    /// on a shelf (`placeOnShelf`), which calls `performRefresh(blocking:
+    /// true)` directly. This is the cold-start/retry path, called each time
+    /// Search appears. If a cached batch from last session is already
+    /// showing (see `init()`), this refreshes it silently in the background
+    /// rather than blocking the UI on a fresh network call. Only blocks with
+    /// a loading state when there's truly nothing cached to show.
     func loadTodayFeedIfNeeded() async {
         await performRefresh(blocking: recommendationRows.isEmpty)
     }
