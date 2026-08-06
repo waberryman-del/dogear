@@ -9,9 +9,14 @@ import SwiftUI
 /// all now; the fixed daily cadence replaces it entirely.
 ///
 /// Composition (decision #24): the hero "Currently Reading" card (decision
-/// #17, unchanged) shows alongside undecided daily picks when both apply.
-/// Once all 3 are decided, the daily-picks section clears until tomorrow —
-/// `library.allTodaysPicksDecided` drives that.
+/// #17) shows alongside undecided daily picks when both apply. Once all 3
+/// are decided, the daily-picks section clears until tomorrow —
+/// `library.allTodaysPicksDecided` drives that — and the hero card becomes
+/// the main event instead, via `HeroReadingCard(isProminent:)`. [UPDATED —
+/// the earlier full-bleed/blurred-cover `TodayHeroMoment` redesign for that
+/// moment was scrapped: disliked in review, and had its own layout bugs
+/// (cut-off text). Scaling up the same proven `HeroReadingCard` anatomy
+/// replaces it — no new bespoke layout.]
 struct TodayView: View {
     @EnvironmentObject var library: LibraryStore
     @State private var selectedRecommendation: Recommendation?
@@ -21,19 +26,17 @@ struct TodayView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: DogearSpacing.space8) {
                     header
-                    // Design brief: once all 3 picks are decided, the small
-                    // floating hero card in otherwise-empty space becomes the
-                    // full-bleed hero moment instead. Only when there's an
-                    // actual currently-reading book — otherwise this falls
-                    // through to the compact HeroReadingCard, which already
-                    // handles its own "nothing in progress" empty state.
-                    if library.allTodaysPicksDecided, let entry = library.currentlyReadingEntry {
-                        TodayHeroMoment(entry: entry)
+                    // Once all 3 picks are decided, the hero card becomes the
+                    // main event instead of a small card in otherwise-empty
+                    // space — `isProminent` only visually matters when there's
+                    // an actual currently-reading book; the empty-state invite
+                    // (no book in progress) stays its normal compact size
+                    // either way.
+                    if library.allTodaysPicksDecided {
+                        HeroReadingCard(isProminent: true)
                     } else {
                         HeroReadingCard()
-                        if !library.allTodaysPicksDecided {
-                            dailyPicksSection
-                        }
+                        dailyPicksSection
                     }
                 }
                 .padding(.vertical, DogearSpacing.space6)

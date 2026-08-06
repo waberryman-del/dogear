@@ -10,11 +10,20 @@ import SwiftUI
 /// progress bar. There's no documented hero-card anatomy yet — this
 /// extrapolates from existing tokens rather than inventing new ones; flagging
 /// for formalization into the design doc.
+///
+/// [UPDATED — replaces the scrapped full-bleed `TodayHeroMoment`] Once all of
+/// Today's daily picks are decided, this card becomes the main event on the
+/// screen instead of a small floating card in otherwise-empty space. Rather
+/// than a bespoke full-bleed/blurred-cover redesign (tried, rejected, and had
+/// layout bugs of its own), `isProminent` scales up this same proven anatomy —
+/// bigger cover, bigger type, taller progress bar, more padding — so it's the
+/// same card readers already know, just given real visual weight.
 struct HeroReadingCard: View {
     @EnvironmentObject var library: LibraryStore
     @State private var showProgressSheet = false
     @State private var showStartSheet = false
     @State private var showSwitchOptions = false
+    var isProminent: Bool = false
 
     var body: some View {
         Group {
@@ -53,25 +62,25 @@ struct HeroReadingCard: View {
         Button {
             showProgressSheet = true
         } label: {
-            VStack(alignment: .leading, spacing: DogearSpacing.space3) {
+            VStack(alignment: .leading, spacing: isProminent ? DogearSpacing.space4 : DogearSpacing.space3) {
                 HStack(alignment: .top, spacing: DogearSpacing.space4) {
                     BookCoverView(
                         url: entry.book.coverURL, title: entry.book.title, author: entry.book.author,
-                        width: 76, height: 110, displayMode: .aspectFit
+                        width: isProminent ? 108 : 76, height: isProminent ? 156 : 110, displayMode: .aspectFit
                     )
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: isProminent ? DogearSpacing.space1 : 4) {
                         Text("CURRENTLY READING")
                             .font(DogearType.caption).tracking(1.5)
                             .foregroundStyle(DogearColor.brass)
                         Text(entry.book.title)
-                            .font(DogearType.rowLabelItalic)
+                            .font(isProminent ? DogearType.titleItalic : DogearType.rowLabelItalic)
                             .foregroundStyle(DogearColor.ink)
                         Text(entry.book.author)
-                            .font(DogearType.bodySmall)
+                            .font(isProminent ? DogearType.body : DogearType.bodySmall)
                             .foregroundStyle(DogearColor.mutedInk)
                         if let statusText = entry.pageStatusText {
                             Text(statusText)
-                                .font(DogearType.caption)
+                                .font(isProminent ? DogearType.bodySmall : DogearType.caption)
                                 .foregroundStyle(DogearColor.mutedInk)
                         }
                     }
@@ -81,11 +90,11 @@ struct HeroReadingCard: View {
                     progressBar(fraction: fraction)
                 } else {
                     Text("Tap to add your current page")
-                        .font(DogearType.caption)
+                        .font(isProminent ? DogearType.bodySmall : DogearType.caption)
                         .foregroundStyle(DogearColor.mutedInk)
                 }
             }
-            .padding(DogearSpacing.space4)
+            .padding(isProminent ? DogearSpacing.space6 : DogearSpacing.space4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(DogearColor.linen)
             .clipShape(RoundedRectangle(cornerRadius: DogearRadius.card))
@@ -96,7 +105,7 @@ struct HeroReadingCard: View {
                 showSwitchOptions = true
             } label: {
                 Image(systemName: "ellipsis.circle.fill")
-                    .font(.system(size: 20))
+                    .font(.system(size: isProminent ? 24 : 20))
                     .foregroundStyle(DogearColor.mutedInk)
                     .padding(DogearSpacing.space2)
             }
@@ -136,7 +145,7 @@ struct HeroReadingCard: View {
                     .frame(width: geo.size.width * fraction)
             }
         }
-        .frame(height: 6)
+        .frame(height: isProminent ? 10 : 6)
     }
 
 }

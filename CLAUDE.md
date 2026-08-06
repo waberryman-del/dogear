@@ -9,10 +9,19 @@ Architecture (locked — don't relitigate this each session)
 Client: SwiftUI, iOS 17+, MVVM. State lives in LibraryStore (ObservableObject),
 injected via .environmentObject. No third-party dependency managers needed for v1 —
 keep it Apple-native (URLSession, Codable, SwiftData for persistence).
-Persistence: SwiftData (not Core Data, not a remote DB) for v1. Local-first: the
-library lives on-device. Add CloudKit sync only after core UX is solid. Currently
-in-memory only (LibraryStore.entries) — this migration is still pending, tracked
-in Phase 3 below, don't let it get skipped silently.
+Persistence: SwiftData (not Core Data, not a remote DB) is still the intended v1
+end state — local-first, library lives on-device, CloudKit sync only after core UX
+is solid. [UPDATED — Launch Roadmap Stage 0] LibraryStore.entries (shelf status,
+reading progress, goals) was confirmed in-memory-only and losing the entire shelf
+on every force-quit — this was fixed as a stopgap via the same UserDefaults JSON
+pattern already used for shownBooks/notInterestedBooks/todaysPicks/recommendation
+Rows (entriesKey + persistEntries(), called from every entries-mutating method,
+loaded in init()). Confirmed on a real device: add a book, start reading, set page
++ goal, force-quit, reopen — everything survives. The data-loss risk is closed.
+The full SwiftData migration described below is still the legitimate long-term
+answer (proper schema, CloudKit-readiness, no hand-rolled encode/decode) — it's
+just no longer an urgent blocker, and can happen on its own schedule rather than
+gating everything else.
 Backend: Vercel serverless functions in backend/api/ — recommend.js and
 why-liked-it.js exist; vibe-search.js is new in Phase 2 (see below). All hold
 ANTHROPIC_API_KEY server-side and call the Anthropic Messages API
@@ -44,9 +53,11 @@ genre — and gets AI-curated book matches. See "Vibe search spec" below. This i
 what differentiates Dogear from Goodreads/StoryGraph-style trackers; treat it as
 a first-class feature, not an experiment bolted onto Today.
 Phase 3 — Real organization. The three-shelf placement system (decision #2/#3),
-the "start reading" flow, midpoint check-ins (decision #5), and the SwiftData
-persistence migration this all depends on. This turns My Shelf from a static list
-into the actual product.
+the "start reading" flow, midpoint check-ins (decision #5). This turns My Shelf
+from a static list into the actual product. [UPDATED — Launch Roadmap Stage 0]
+This no longer blocks on a SwiftData migration — entries persistence was fixed via
+the UserDefaults JSON stopgap (see Persistence, above). SwiftData is still the
+right long-term migration, just no longer a Phase 3 dependency.
 Phase 4 — Design pass. Real app icon and brand colors — see decision #23 below,
 which now supersedes the placeholder forest/ink/brass palette — the fold-gesture
 signature interaction (decision #6), empty states, loading polish. Deliberately
