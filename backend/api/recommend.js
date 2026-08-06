@@ -168,7 +168,17 @@ async function generateRow(assignment, historyText) {
 
   return {
     kind: assignment.kind,
-    label: parsed.label,
+    // CONFIRMED live (reproduced against production): Claude occasionally
+    // omits "label" from its JSON even though recommendations come back
+    // fine. `parsed.label` was then `undefined`, and JSON.stringify silently
+    // DROPS undefined-valued keys — so the row shipped to the client with no
+    // "label" field at all. The iOS side's `RecommendationRow.label` is a
+    // non-optional String, so that one row's missing key failed the *whole*
+    // response's decode, discarding all 3 rows' worth of otherwise-good
+    // recommendations. A generic fallback here is strictly better than that.
+    label: parsed.label || (assignment.kind === "discovery"
+      ? "Something a little different tonight"
+      : "Because of what you've read"),
     recommendations: parsed.recommendations ?? [],
     claudeMs,
   };
@@ -212,15 +222,32 @@ Only how broadly you interpret the pattern itself should loosen. Return 3-6 book
 // awaits between reading and marking a key used, but necessary: without it,
 // two independently-short rows could both reach for the same oldest
 // shown_books entry and lose it to the handler's later cross-row dedup.
-function backfillFromShownBooks(currentResults, shownBooks, shelvedBooks, needed, usedKeys) {
+// CONFIRMED root cause of a real bug (reproduced against production): this
+// only excluded `shelvedBooks`, not `readHistory` — but a book can be in
+// read_history (finished) without being in shelved_books in this specific
+// payload shape, and in real usage that's not an edge case: any
+// recommended book that got added, read, and finished ends up in exactly
+// this state. Backfill was picking already-finished books straight out of
+// shown_books and re-recommending them as new. Both lists are now hard
+// exclusions here, matching decision #8's "never recommend a book already
+// in read_history" with no exception. Each backfilled entry is also marked
+// `backfilled: true` — the client's own defense-in-depth filter used to
+// treat "already in shown_books" as an unconditional removal reason, which
+// is exactly where a backfilled pick comes from, so it was silently
+// stripping every backfilled book back out and collapsing rows that only
+// met their floor this way. That flag is what lets the client's filter
+// (see `LibraryStore.filterAlreadyShown`) tell "the server put this back on
+// purpose" apart from "a model mistake slipped through."
+function backfillFromShownBooks(currentResults, shownBooks, shelvedBooks, readHistory, needed, usedKeys) {
   if (needed <= 0 || !Array.isArray(shownBooks)) return [];
 
   const bookKey = (title, author) =>
     `${(title ?? "").toLowerCase().trim()}|${(author ?? "").toLowerCase().trim()}`;
 
-  const shelvedKeys = new Set(
-    (Array.isArray(shelvedBooks) ? shelvedBooks : []).map((b) => bookKey(b?.title, b?.author))
-  );
+  const hardExcludedKeys = new Set([
+    ...(Array.isArray(shelvedBooks) ? shelvedBooks : []).map((b) => bookKey(b?.title, b?.author)),
+    ...(Array.isArray(readHistory) ? readHistory : []).map((b) => bookKey(b?.title, b?.author)),
+  ]);
   const pickedKeys = new Set(currentResults.map((r) => bookKey(r.title, r.author)));
 
   const backfilled = [];
@@ -230,7 +257,7 @@ function backfillFromShownBooks(currentResults, shownBooks, shelvedBooks, needed
     const author = entry?.author;
     if (!title || !author) continue;
     const key = bookKey(title, author);
-    if (shelvedKeys.has(key) || pickedKeys.has(key) || usedKeys.has(key)) continue;
+    if (hardExcludedKeys.has(key) || pickedKeys.has(key) || usedKeys.has(key)) continue;
     pickedKeys.add(key);
     usedKeys.add(key);
     backfilled.push({
@@ -238,12 +265,13 @@ function backfillFromShownBooks(currentResults, shownBooks, shelvedBooks, needed
       author,
       reason: "You saw this one before and it's still one of the strongest fits here.",
       confidence: 0.5,
+      backfilled: true,
     });
   }
   return backfilled;
 }
 
-async function generateRowWithRetry(assignment, historyText, shownBooks, shelvedBooks, usedBackfillKeys) {
+async function generateRowWithRetry(assignment, historyText, shownBooks, shelvedBooks, readHistory, usedBackfillKeys) {
   // CONFIRMED root cause (reproduced against production: 12 titles of
   // shown_books + read_history produced only 1 of 3 rows). Same bug as
   // vibe-search.js: the first attempt here was never wrapped in try/catch —
@@ -291,7 +319,7 @@ async function generateRowWithRetry(assignment, historyText, shownBooks, shelved
 
   if (result.recommendations.length < MIN_BOOKS_PER_ROW) {
     const needed = MIN_BOOKS_PER_ROW - result.recommendations.length;
-    const backfilled = backfillFromShownBooks(result.recommendations, shownBooks, shelvedBooks, needed, usedBackfillKeys);
+    const backfilled = backfillFromShownBooks(result.recommendations, shownBooks, shelvedBooks, readHistory, needed, usedBackfillKeys);
     if (backfilled.length > 0) {
       console.log(
         `Row (${assignment.kind}) scarcity fallback fired: backfilling ${backfilled.length} book(s) ` +
@@ -349,7 +377,7 @@ export default async function handler(req, res) {
     const usedBackfillKeys = new Set();
     const settled = await Promise.allSettled(
       ROW_ASSIGNMENTS.map((assignment) =>
-        generateRowWithRetry(assignment, historyText, shown_books, shelved_books, usedBackfillKeys)
+        generateRowWithRetry(assignment, historyText, shown_books, shelved_books, read_history, usedBackfillKeys)
       )
     );
 
@@ -410,7 +438,7 @@ export default async function handler(req, res) {
     const lookupStart = Date.now();
     const enrichedFlat = await mapWithConcurrency(flat, LOOKUP_CONCURRENCY, async ({ rec }) => {
       const book = await safeLookupBook(rec.title, rec.author);
-      return { book, reason: rec.reason, confidence: rec.confidence ?? 0.5 };
+      return { book, reason: rec.reason, confidence: rec.confidence ?? 0.5, backfilled: rec.backfilled === true };
     });
     const lookupMs = Date.now() - lookupStart;
 

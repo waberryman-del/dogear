@@ -183,15 +183,24 @@ async function generatePicksWithRetry(userContent) {
 // daily batch with fewer than the promised 3. `shownBooks` is already in
 // oldest-first order (the client only ever appends), so a plain
 // left-to-right scan is "oldest first" — no separate sort needed.
-function backfillFromShownBooks(currentPicks, shownBooks, shelvedBooks, needed) {
+// Same fix as recommend.js/vibe-search.js (real bug, confirmed against
+// production on the row engine): excluding only `shelvedBooks` let backfill
+// pick already-finished books straight out of shown_books, since a book can
+// be in read_history without being in shelved_books in this payload shape.
+// Both are hard exclusions now. `backfilled: true` also mirrors the other
+// two endpoints for consistency, even though today's client-side consumer
+// (`loadTodaysPicksIfNeeded`) doesn't run the shownBooks-stripping filter
+// the other two needed this flag to bypass.
+function backfillFromShownBooks(currentPicks, shownBooks, shelvedBooks, readHistory, needed) {
   if (needed <= 0 || !Array.isArray(shownBooks)) return [];
 
   const bookKey = (title, author) =>
     `${(title ?? "").toLowerCase().trim()}|${(author ?? "").toLowerCase().trim()}`;
 
-  const shelvedKeys = new Set(
-    (Array.isArray(shelvedBooks) ? shelvedBooks : []).map((b) => bookKey(b?.title, b?.author))
-  );
+  const hardExcludedKeys = new Set([
+    ...(Array.isArray(shelvedBooks) ? shelvedBooks : []).map((b) => bookKey(b?.title, b?.author)),
+    ...(Array.isArray(readHistory) ? readHistory : []).map((b) => bookKey(b?.title, b?.author)),
+  ]);
   const pickedKeys = new Set(currentPicks.map((r) => bookKey(r.title, r.author)));
 
   const backfilled = [];
@@ -201,13 +210,14 @@ function backfillFromShownBooks(currentPicks, shownBooks, shelvedBooks, needed) 
     const author = entry?.author;
     if (!title || !author) continue;
     const key = bookKey(title, author);
-    if (shelvedKeys.has(key) || pickedKeys.has(key)) continue;
+    if (hardExcludedKeys.has(key) || pickedKeys.has(key)) continue;
     pickedKeys.add(key);
     backfilled.push({
       title,
       author,
       reason: "You saw this one before and it's still one of the strongest fits here.",
       confidence: 0.5,
+      backfilled: true,
     });
   }
   return backfilled;
@@ -251,7 +261,7 @@ export default async function handler(req, res) {
     let finalPicks = rawPicks;
     if (finalPicks.length < MIN_PICKS) {
       const needed = MIN_PICKS - finalPicks.length;
-      const backfilled = backfillFromShownBooks(finalPicks, shown_books, shelved_books, needed);
+      const backfilled = backfillFromShownBooks(finalPicks, shown_books, shelved_books, read_history, needed);
       if (backfilled.length > 0) {
         console.log(
           `daily-picks scarcity fallback fired: backfilling ${backfilled.length} book(s) ` +
@@ -268,6 +278,7 @@ export default async function handler(req, res) {
         book: await safeLookupBook(rec.title, rec.author),
         reason: rec.reason,
         confidence: rec.confidence ?? 0.5,
+        backfilled: rec.backfilled === true,
       })
     );
 

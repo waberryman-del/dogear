@@ -125,6 +125,35 @@ struct Recommendation: Identifiable, Codable, Equatable {
     var book: Book
     var reason: String          // AI-generated "why this, why now"
     var confidence: Double      // 0-1, used for ordering only, never shown raw
+    /// True when the backend's decision #8 scarcity fallback supplied this
+    /// pick from the reader's own shown-books history rather than a fresh
+    /// AI pick. CONFIRMED root cause of a real bug: `LibraryStore`'s
+    /// defense-in-depth exclusion filter treats "already in shownBooks" as
+    /// an absolute removal reason — which is exactly where a backfilled
+    /// pick comes from by definition, so every backfilled recommendation
+    /// was getting silently stripped back out client-side, collapsing rows
+    /// that only met their floor via backfill. This flag lets that filter
+    /// tell "the server intentionally resurfaced this" apart from "a model
+    /// mistake slipped through," which is the case the filter actually
+    /// exists to catch. Defaults false so older cached/server data (with no
+    /// such field) decodes as "not backfilled," the historically-correct
+    /// behavior.
+    var backfilled: Bool = false
+
+    enum CodingKeys: String, CodingKey { case book, reason, confidence, backfilled }
+    init(book: Book, reason: String, confidence: Double, backfilled: Bool = false) {
+        self.book = book
+        self.reason = reason
+        self.confidence = confidence
+        self.backfilled = backfilled
+    }
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        book = try container.decode(Book.self, forKey: .book)
+        reason = try container.decode(String.self, forKey: .reason)
+        confidence = try container.decode(Double.self, forKey: .confidence)
+        backfilled = try container.decodeIfPresent(Bool.self, forKey: .backfilled) ?? false
+    }
 }
 
 /// Today's feed is organized into labeled, horizontally-scrolling rows rather

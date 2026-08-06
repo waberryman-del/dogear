@@ -425,9 +425,19 @@ final class LibraryStore: ObservableObject {
     /// rather than surface a book the reader has already been shown — a
     /// shorter-than-requested batch is preferable to a repeat. Used by Vibe
     /// Search's flat results list.
+    ///
+    /// CONFIRMED root cause of a real bug (reproduced against production):
+    /// this used to filter purely on "is this key in shownBooks," with no
+    /// exception — but that's precisely where a decision #8 scarcity-
+    /// backfilled pick comes from by definition, so every backfilled
+    /// recommendation was getting silently stripped right back out here,
+    /// collapsing any row that only reached its floor via backfill. `rec
+    /// .backfilled` lets this filter skip the ones the server intentionally
+    /// resurfaced, while still catching a genuine model mistake.
     private func filterAlreadyShown(_ recs: [Recommendation]) -> [Recommendation] {
         let shownKeys = Set(shownBooks.map { $0.normalizedKey })
         return recs.filter { rec in
+            if rec.backfilled { return true }
             let key = ShownBookRecord.normalize(title: rec.book.title, author: rec.book.author)
             return !shownKeys.contains(key)
         }
@@ -439,6 +449,7 @@ final class LibraryStore: ObservableObject {
         let shownKeys = Set(shownBooks.map { $0.normalizedKey })
         return rows.compactMap { row in
             let filtered = row.recommendations.filter { rec in
+                if rec.backfilled { return true }
                 let key = ShownBookRecord.normalize(title: rec.book.title, author: rec.book.author)
                 return !shownKeys.contains(key)
             }

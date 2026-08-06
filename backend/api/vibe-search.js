@@ -205,15 +205,28 @@ async function generateResultsWithRetry(userContent) {
 // returning a thin/empty result. `shownBooks` is already in oldest-first
 // order (the client only ever appends), so a plain left-to-right scan is
 // "oldest first" — no separate sort needed.
-function backfillFromShownBooks(currentResults, shownBooks, shelvedBooks, needed) {
+// CONFIRMED root cause of a real bug (reproduced against production, same
+// mechanism found and fixed in recommend.js): this only excluded
+// `shelvedBooks`, not `readHistory` — but any recommended book that got
+// added, read, and finished ends up in shown_books AND read_history
+// without necessarily being in shelved_books, and backfill was picking
+// already-finished books straight out of shown_books and re-recommending
+// them. Both are hard exclusions here now. Each backfilled entry is marked
+// `backfilled: true` — the client's own defense-in-depth filter used to
+// treat "already in shown_books" as unconditional removal, which is
+// exactly where a backfilled pick comes from, silently stripping every one
+// back out. See `LibraryStore.filterAlreadyShown` for the client-side half
+// of this fix.
+function backfillFromShownBooks(currentResults, shownBooks, shelvedBooks, readHistory, needed) {
   if (needed <= 0 || !Array.isArray(shownBooks)) return [];
 
   const bookKey = (title, author) =>
     `${(title ?? "").toLowerCase().trim()}|${(author ?? "").toLowerCase().trim()}`;
 
-  const shelvedKeys = new Set(
-    (Array.isArray(shelvedBooks) ? shelvedBooks : []).map((b) => bookKey(b?.title, b?.author))
-  );
+  const hardExcludedKeys = new Set([
+    ...(Array.isArray(shelvedBooks) ? shelvedBooks : []).map((b) => bookKey(b?.title, b?.author)),
+    ...(Array.isArray(readHistory) ? readHistory : []).map((b) => bookKey(b?.title, b?.author)),
+  ]);
   const pickedKeys = new Set(currentResults.map((r) => bookKey(r.title, r.author)));
 
   const backfilled = [];
@@ -223,13 +236,14 @@ function backfillFromShownBooks(currentResults, shownBooks, shelvedBooks, needed
     const author = entry?.author;
     if (!title || !author) continue;
     const key = bookKey(title, author);
-    if (shelvedKeys.has(key) || pickedKeys.has(key)) continue;
+    if (hardExcludedKeys.has(key) || pickedKeys.has(key)) continue;
     pickedKeys.add(key);
     backfilled.push({
       title,
       author,
       reason: "You saw this one before and it's still one of the strongest fits here.",
       confidence: 0.5,
+      backfilled: true,
     });
   }
   return backfilled;
@@ -280,7 +294,7 @@ export default async function handler(req, res) {
     let finalResults = rawResults;
     if (finalResults.length < MIN_RESULTS) {
       const needed = MIN_RESULTS - finalResults.length;
-      const backfilled = backfillFromShownBooks(finalResults, shown_books, shelved_books, needed);
+      const backfilled = backfillFromShownBooks(finalResults, shown_books, shelved_books, read_history, needed);
       if (backfilled.length > 0) {
         console.log(
           `vibe-search scarcity fallback fired: backfilling ${backfilled.length} book(s) ` +
@@ -297,6 +311,7 @@ export default async function handler(req, res) {
         book: await safeLookupBook(rec.title, rec.author),
         reason: rec.reason,
         confidence: rec.confidence ?? 0.5,
+        backfilled: rec.backfilled === true,
       })
     );
 
