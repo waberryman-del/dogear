@@ -27,15 +27,23 @@ final class LibraryStore: ObservableObject {
     private let shownBooksKey = "dogear.shownBooks"
     private let recommendationRowsKey = "dogear.recommendationRows"
 
-    /// Debounce guards against overlapping recommend()/vibeSearch() calls —
-    /// e.g. the app backgrounded and foregrounded in quick succession firing
-    /// Today's feed load more than once before the first call resolves. A
-    /// redundant call while one is already in flight is dropped rather than
-    /// stacking a second concurrent request, which was observed to trigger
-    /// Anthropic rate limiting under rapid repeats. Safe to check-then-set
-    /// synchronously like this since LibraryStore is @MainActor and there's
-    /// no `await` between the check and the set — no other call can interleave.
-    private var isTodayRefreshInFlight = false
+    /// CONFIRMED bug (found via live console capture, not assumption): this
+    /// used to be a bare Bool guard (`isTodayRefreshInFlight`) shared across
+    /// `.task`'s automatic load, `.refreshable`'s pull gesture, and
+    /// `placeOnShelf`'s earned refresh. A bare guard means a *second* caller
+    /// that arrives while the first is still running just returns instantly
+    /// — a real no-op, not "the same fetch, just not the caller who started
+    /// it." Reproduced: pulling to refresh moments after Today's own
+    /// automatic load (which fires on every appearance) silently no-op'd
+    /// the pull — the visible "Finding new books for you" banner cleared in
+    /// well under a second because there was never a real fetch behind it,
+    /// while the *original* automatic load kept running invisibly and
+    /// eventually updated content on its own, disconnected from the pull.
+    /// Storing the in-flight work as a `Task` that a second caller can
+    /// `await` instead of skip fixes this: every caller either starts the
+    /// real fetch or genuinely waits on the one already running, and gets
+    /// its real success/failure back.
+    private var inFlightTodayRefresh: Task<Bool, Never>?
     private var isVibeSearchInFlight = false
 
     init() {
@@ -63,7 +71,7 @@ final class LibraryStore: ObservableObject {
         defaults.set(genres.map { $0.rawValue }, forKey: onboardingGenresKey)
         defaults.set(true, forKey: hasOnboardedKey)
         hasCompletedOnboarding = true
-        await refreshRecommendations()   // seeds the very first shelf from genres alone
+        await performRefresh(blocking: true)   // seeds the very first shelf from genres alone
     }
 
     // MARK: - Adding + starting books
@@ -134,7 +142,7 @@ final class LibraryStore: ObservableObject {
             entries[idx].aiWhyYouLikedIt = note
         }
         DogearHaptics.actionCommitted()  // Design System Section 10: "Book placed on shelf → medium impact"
-        await refreshRecommendations()   // earned refresh
+        await performRefresh(blocking: true)   // earned refresh
     }
 
     // MARK: - Vibe search (Phase 2)
@@ -171,58 +179,69 @@ final class LibraryStore: ObservableObject {
 
     /// Today has no manual refresh control (decision #4, amended) — new picks
     /// are earned only by shelving a book (`placeOnShelf`), which calls
-    /// `refreshRecommendations()` directly. This is the cold-start/retry path,
+    /// `performRefresh(blocking: true)` directly. This is the cold-start/retry path,
     /// called each time Today appears. If a cached batch from last session is
     /// already showing (see `init()`), this refreshes it silently in the
     /// background rather than blocking the UI on a fresh network call — the
     /// reader sees something immediately and it updates underneath them. Only
     /// blocks with a loading state when there's truly nothing cached to show.
     func loadTodayFeedIfNeeded() async {
-        guard !isTodayRefreshInFlight else { return }
-        if recommendationRows.isEmpty {
-            await refreshRecommendations()
-        } else {
-            await performRefresh(blocking: false)
+        await performRefresh(blocking: recommendationRows.isEmpty)
+    }
+
+    /// Explicit pull-to-refresh entry point, distinct from the silent
+    /// background load: this is a deliberate user action, so unlike
+    /// `loadTodayFeedIfNeeded()`'s silence-on-failure behavior, the caller
+    /// gets a real success/failure back to show honest feedback for.
+    @discardableResult
+    func refreshTodayFromPull() async -> Bool {
+        await performRefresh(blocking: false)
+    }
+
+    @discardableResult
+    private func performRefresh(blocking: Bool) async -> Bool {
+        if let existing = inFlightTodayRefresh {
+            return await existing.value
         }
-    }
-
-    private func refreshRecommendations() async {
-        await performRefresh(blocking: true)
-    }
-
-    private func performRefresh(blocking: Bool) async {
-        guard !isTodayRefreshInFlight else { return }
-        isTodayRefreshInFlight = true
         if blocking { isRefreshingRecs = true }
-        defer {
-            isTodayRefreshInFlight = false
-            if blocking { isRefreshingRecs = false }
-            hasAttemptedTodayLoad = true
-        }
-        do {
-            let rows = try await recEngine.nextPicks(
-                basedOn: entries,
-                onboardingGenres: onboardingGenres,
-                shownBooks: shownBooks
-            )
-            let filtered = filterAlreadyShown(rows)
-            withAnimation(DogearMotion.standard) {
-                recommendationRows = filtered
+
+        let task = Task<Bool, Never> { [weak self] in
+            guard let self else { return false }
+            do {
+                let rows = try await self.recEngine.nextPicks(
+                    basedOn: self.entries,
+                    onboardingGenres: self.onboardingGenres,
+                    shownBooks: self.shownBooks
+                )
+                let filtered = self.filterAlreadyShown(rows)
+                withAnimation(DogearMotion.standard) {
+                    self.recommendationRows = filtered
+                }
+                self.recordShown(filtered.flatMap { $0.recommendations }.map { $0.book })
+                self.recommendationsLoadFailed = false
+                self.persistRecommendationRows()
+                return true
+            } catch {
+                print("[LibraryStore] Today refresh failed: \(error)")
+                // Leave any existing rows on screen — a failed refresh should
+                // never blank out picks the reader already saw. Only surface
+                // the retry state when there was nothing on screen to begin
+                // with; a silent background refresh failing shouldn't flag
+                // already-good cached content as broken. (Pull-to-refresh
+                // callers still get `false` back to show their own honest
+                // feedback — this only controls the full-screen error state.)
+                if self.recommendationRows.isEmpty {
+                    self.recommendationsLoadFailed = true
+                }
+                return false
             }
-            recordShown(filtered.flatMap { $0.recommendations }.map { $0.book })
-            recommendationsLoadFailed = false
-            persistRecommendationRows()
-        } catch {
-            print("[LibraryStore] Today refresh failed: \(error)")
-            // Leave any existing rows on screen — a failed refresh should
-            // never blank out picks the reader already saw. Only surface the
-            // retry state when there was nothing on screen to begin with; a
-            // silent background refresh failing shouldn't flag already-good
-            // cached content as broken.
-            if recommendationRows.isEmpty {
-                recommendationsLoadFailed = true
-            }
         }
+        inFlightTodayRefresh = task
+        let succeeded = await task.value
+        inFlightTodayRefresh = nil
+        if blocking { isRefreshingRecs = false }
+        hasAttemptedTodayLoad = true
+        return succeeded
     }
 
     private func persistRecommendationRows() {

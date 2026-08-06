@@ -116,12 +116,23 @@ explicitly as something different, e.g. "Something a little different tonight."`
   },
 ];
 
+// See vibe-search.js for the fuller rationale — protects against Claude
+// occasionally prefacing the JSON with commentary despite being told not to,
+// which otherwise breaks a strict JSON.parse.
+function extractJSON(raw) {
+  const trimmed = raw.trim();
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start === -1 || end === -1 || end < start) return trimmed;
+  return trimmed.slice(start, end + 1);
+}
+
 async function generateRow(assignment, historyText) {
   const userContent = `${historyText}\n\n${assignment.instruction}`;
   const claudeStart = Date.now();
   const msg = await anthropic.messages.create({
     model: "claude-sonnet-5",
-    max_tokens: 1500,
+    max_tokens: 2000,
     system: BASE_SYSTEM_PROMPT,
     messages: [{ role: "user", content: userContent }],
   });
@@ -130,7 +141,7 @@ async function generateRow(assignment, historyText) {
   const raw = msg.content.find((b) => b.type === "text")?.text ?? "{}";
   let parsed;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(extractJSON(raw));
   } catch (parseErr) {
     console.error(`Failed to parse ${assignment.kind} row response:`, parseErr.message, "raw:", raw);
     throw parseErr;
@@ -162,7 +173,30 @@ exclusions do not change: still never recommend anything in read_history or show
 Only how broadly you interpret the pattern itself should loosen. Return 4-6 books.`;
 
 async function generateRowWithRetry(assignment, historyText) {
-  const first = await generateRow(assignment, historyText);
+  // CONFIRMED root cause (reproduced against production: 12 titles of
+  // shown_books + read_history produced only 1 of 3 rows). Same bug as
+  // vibe-search.js: the first attempt here was never wrapped in try/catch —
+  // only the retry call was — so a row whose first Claude call threw (a
+  // parse failure, not just a low count) got zero retry and was dropped via
+  // Promise.allSettled's rejection path in the handler below. A row that
+  // came back with too few books DID retry; a row that came back unparseable
+  // did not. Both are now covered the same way.
+  const retryAssignment = {
+    ...assignment,
+    instruction: assignment.instruction + BROADEN_RETRY_HINT,
+  };
+
+  let first;
+  try {
+    first = await generateRow(assignment, historyText);
+  } catch (err) {
+    console.error(
+      `Row (${assignment.kind}) first attempt threw, retrying with a broadened prompt:`,
+      err?.message
+    );
+    return generateRow(retryAssignment, historyText);
+  }
+
   if (first.recommendations.length >= MIN_BOOKS_PER_ROW) {
     return first;
   }
@@ -172,10 +206,6 @@ async function generateRowWithRetry(assignment, historyText) {
     `first attempt, retrying with a broadened prompt`
   );
   try {
-    const retryAssignment = {
-      ...assignment,
-      instruction: assignment.instruction + BROADEN_RETRY_HINT,
-    };
     const retry = await generateRow(retryAssignment, historyText);
     // Keep whichever attempt did better — the retry is meant to recover, not
     // to unconditionally replace a first attempt that was already fine.
@@ -253,7 +283,24 @@ export default async function handler(req, res) {
         });
         return { ...row, recommendations: kept };
       })
-      .filter((row) => row.recommendations.length > 0);
+      .filter((row) => {
+        if (row.recommendations.length > 0) return true;
+        // Previously silent — a row with 0 books after dedup just vanished
+        // from the response with nothing logged anywhere, which is exactly
+        // why "only one row" went unconfirmed until it was reproduced by hand.
+        console.log(`Row (${row.kind}) "${row.label}" dropped: 0 books after dedup`);
+        return false;
+      });
+
+    // Final, authoritative row count actually going to the client — distinct
+    // from `successfulRows.length` above, which only counts rows whose
+    // Claude call didn't throw and says nothing about whether they survived
+    // the empty-after-dedup filter. This is the number that should be
+    // compared against decision #19's "2-3 taste rows + 1 discovery row".
+    console.log(
+      `recommend final row count: ${dedupedRows.length}/3 ` +
+      `(kinds: ${dedupedRows.map((r) => r.kind).join(", ") || "none"})`
+    );
 
     // Flatten across the surviving rows so metadata lookups run with bounded
     // concurrency over the whole response, not serially.

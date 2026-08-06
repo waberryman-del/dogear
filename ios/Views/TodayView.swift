@@ -17,6 +17,12 @@ struct TodayView: View {
     /// taking ~15-20s, needs a real "something is happening" state, not just
     /// the small native pull-spinner with no copy.
     @State private var isPullRefreshing = false
+    /// Set only by a pull-triggered refresh that genuinely failed (including
+    /// joining an in-flight fetch that then failed) — the silent background
+    /// load stays silent by design, but a deliberate pull deserves real
+    /// feedback instead of the banner just vanishing with nothing to show
+    /// for it. Auto-clears on the next successful refresh.
+    @State private var pullRefreshFailed = false
 
     var body: some View {
         NavigationStack {
@@ -25,6 +31,10 @@ struct TodayView: View {
                     header
                     if isPullRefreshing {
                         refreshingBanner
+                    } else if pullRefreshFailed {
+                        InlineRetryBanner(message: "Couldn't refresh — showing your last picks.") {
+                            Task { await runPullRefresh() }
+                        }
                     }
                     HeroReadingCard()
                     content
@@ -34,16 +44,7 @@ struct TodayView: View {
             .background(DogearColor.paper)
             .toolbar(.hidden, for: .navigationBar)
             .task { await library.loadTodayFeedIfNeeded() }
-            .refreshable {
-                isPullRefreshing = true
-                await library.loadTodayFeedIfNeeded()
-                isPullRefreshing = false
-                if library.recommendationsLoadFailed {
-                    DogearHaptics.failure()
-                } else {
-                    DogearHaptics.success()
-                }
-            }
+            .refreshable { await runPullRefresh() }
             .sheet(item: $selectedRecommendation) { rec in
                 BookDetailView(book: rec.book, reason: rec.reason)
                     .environmentObject(library)
@@ -80,6 +81,25 @@ struct TodayView: View {
                     }
                 }
             }
+        }
+    }
+
+    /// `library.refreshTodayFromPull()` now genuinely joins an already-running
+    /// fetch instead of silently no-opping when one is in flight (e.g. the
+    /// automatic load `.task` kicks off on every appearance) — real evidence
+    /// (live console capture, not assumption) showed the old shared-guard
+    /// version returning near-instantly with no real fetch behind it,
+    /// clearing the banner in well under a second while an unrelated,
+    /// already-running load silently updated content later on its own.
+    private func runPullRefresh() async {
+        isPullRefreshing = true
+        let succeeded = await library.refreshTodayFromPull()
+        isPullRefreshing = false
+        pullRefreshFailed = !succeeded
+        if succeeded {
+            DogearHaptics.success()
+        } else {
+            DogearHaptics.failure()
         }
     }
 

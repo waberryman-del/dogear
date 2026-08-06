@@ -52,6 +52,19 @@ struct VibePromptField: View {
                 .focused(isFocused)
                 .submitLabel(.search)
                 .onSubmit { triggerSubmit(onSubmit) }
+                // CONFIRMED (Apple dev forums + documented SwiftUI behavior):
+                // `.onSubmit` does not fire for `TextField(axis: .vertical)` —
+                // the return/search key inserts a newline into the bound text
+                // instead, regardless of `submitLabel`. This is why keyboard
+                // submit did nothing: `.onSubmit` above has never actually
+                // been reachable for this field. Detecting the inserted
+                // newline and stripping it is the standard workaround.
+                .onChange(of: text.wrappedValue) { _, newValue in
+                    if newValue.hasSuffix("\n") {
+                        text.wrappedValue = String(newValue.dropLast())
+                        triggerSubmit(onSubmit)
+                    }
+                }
 
             submitArrow(action: { triggerSubmit(onSubmit) }, disabled: isEmpty)
         }

@@ -117,10 +117,29 @@ returning a short list. The hard exclusions do not change: still never recommend
 in read_history or shown_books. Only how broadly you interpret the vibe itself should
 loosen. Return 5-6 books.`;
 
+// CONFIRMED root cause (reproduced against production): a large shown_books
+// list combined with a refinement consistently produced a real 500, ~20s in —
+// a genuine generation attempt that failed, not a fast validation error.
+// Traced to the code: the JSON.parse failure path below is caught and
+// re-thrown, but the retry function's *first* attempt was never wrapped in
+// try/catch, only the retry call was — so any throw on attempt 1 (a parse
+// failure, most likely from Claude adding preamble or getting cut off by
+// max_tokens under the combined complexity of a long exclusion list plus
+// refinement blending) skipped the retry entirely and failed the whole
+// request immediately. extractJSON + the try/catch fix below address both
+// the immediate cause and the underlying trigger.
+function extractJSON(raw) {
+  const trimmed = raw.trim();
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start === -1 || end === -1 || end < start) return trimmed;
+  return trimmed.slice(start, end + 1);
+}
+
 async function generateResults(userContent, systemPrompt) {
   const msg = await anthropic.messages.create({
     model: "claude-sonnet-5",
-    max_tokens: 1600,
+    max_tokens: 2200,
     system: systemPrompt,
     messages: [{ role: "user", content: userContent }],
   });
@@ -128,7 +147,7 @@ async function generateResults(userContent, systemPrompt) {
   const raw = msg.content.find((b) => b.type === "text")?.text ?? "{}";
   let parsed;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(extractJSON(raw));
   } catch (parseErr) {
     console.error("Failed to parse Claude response as JSON:", parseErr.message, "raw:", raw);
     throw parseErr;
@@ -141,7 +160,19 @@ async function generateResults(userContent, systemPrompt) {
 }
 
 async function generateResultsWithRetry(userContent) {
-  const first = await generateResults(userContent, SYSTEM_PROMPT);
+  let first;
+  try {
+    first = await generateResults(userContent, SYSTEM_PROMPT);
+  } catch (err) {
+    // The first attempt threw outright (not just a low count) — this used to
+    // fail the whole request with no retry at all. Give it the same second
+    // chance a low-count response gets.
+    console.error(
+      "vibe-search first attempt threw, retrying with a broadened prompt:", err?.message
+    );
+    return generateResults(userContent, SYSTEM_PROMPT + BROADEN_RETRY_HINT);
+  }
+
   if (first.results.length >= MIN_RESULTS) {
     return first;
   }
