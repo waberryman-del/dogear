@@ -98,6 +98,21 @@ final class LibraryStore: ObservableObject {
         )
     }
 
+    /// Stops the current read from the hero card without going through shelf
+    /// placement — placement only happens on actually finishing a book
+    /// (decision #2). Reverts to wantToRead and clears reading-only state so
+    /// the card returns to its empty/invite state and the book can be
+    /// restarted cleanly later. Used for both "switch to a different book"
+    /// (caller starts a new one right after) and "just stop for now."
+    func stopReading(_ bookID: String) {
+        guard let idx = entries.firstIndex(where: { $0.book.id == bookID }) else { return }
+        entries[idx].status = .wantToRead
+        entries[idx].dateStartedReading = nil
+        entries[idx].currentPage = nil
+        entries[idx].readingGoal = nil
+        entries[idx].midpointCheckIn = nil
+    }
+
     // MARK: - Midpoint check-in
 
     func answerMidpointCheckIn(_ bookID: String, stillEnjoying: Bool) {
@@ -118,6 +133,7 @@ final class LibraryStore: ObservableObject {
         if let note = try? await recEngine.generateWhyYouLikedIt(for: entries[idx]) {
             entries[idx].aiWhyYouLikedIt = note
         }
+        DogearHaptics.actionCommitted()  // Design System Section 10: "Book placed on shelf → medium impact"
         await refreshRecommendations()   // earned refresh
     }
 
@@ -193,6 +209,7 @@ final class LibraryStore: ObservableObject {
             recommendationsLoadFailed = false
             persistRecommendationRows()
         } catch {
+            print("[LibraryStore] Today refresh failed: \(error)")
             // Leave any existing rows on screen — a failed refresh should
             // never blank out picks the reader already saw. Only surface the
             // retry state when there was nothing on screen to begin with; a

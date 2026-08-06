@@ -10,7 +10,10 @@ struct DogearChip: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            DogearHaptics.chipSelected()
+            action()
+        }) {
             Text(label)
                 .font(DogearType.label)
                 .foregroundStyle(isSelected ? DogearColor.paper : DogearColor.ink)

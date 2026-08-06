@@ -33,16 +33,19 @@ struct VibeSearchView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: DogearSpacing.space6) {
-                    header
-                    promptField
-                    if !hasSearched && !isSearching {
-                        examplePrompt
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DogearSpacing.space6) {
+                        header
+                        promptField
+                            .id("promptField")
+                        if !hasSearched && !isSearching {
+                            examplePrompt
+                        }
+                        content(scrollProxy: proxy)
                     }
-                    content
+                    .padding(.vertical, DogearSpacing.space6)
                 }
-                .padding(.vertical, DogearSpacing.space6)
             }
             .background(DogearColor.paper)
             .navigationTitle("Vibe search")
@@ -89,6 +92,11 @@ struct VibeSearchView: View {
         .id(exampleIndex)
         .transition(.opacity)
         .onReceive(Timer.publish(every: 3.5, on: .main, in: .common).autoconnect()) { _ in
+            // Skip the rotation while the field is focused — an animated state
+            // change landing in the same run-loop tick as the keyboard's
+            // focus-in animation was competing with it and adding a visible
+            // beat before the keyboard appeared.
+            guard !fieldFocused else { return }
             withAnimation(DogearMotion.standard) {
                 exampleIndex = (exampleIndex + 1) % exampleQueries.count
             }
@@ -96,15 +104,28 @@ struct VibeSearchView: View {
     }
 
     @ViewBuilder
-    private var content: some View {
+    private func content(scrollProxy: ScrollViewProxy) -> some View {
         if isSearching && results.isEmpty {
             LoadingStateView(message: "Finding books for that vibe…")
         } else if searchFailed && results.isEmpty {
             ErrorStateView(message: "Couldn't reach your library's brain.", action: retry)
         } else if !results.isEmpty {
             VStack(alignment: .leading, spacing: DogearSpacing.space5) {
+                queryQuote(scrollProxy: scrollProxy)
                 if searchFailed {
                     InlineRetryBanner(message: "Couldn't apply that refinement.", action: retry)
+                } else if isSearching {
+                    // A refinement is in flight — old results/chips stay on
+                    // screen (never blank out what the reader already saw),
+                    // but without this there was zero feedback that the tap
+                    // did anything until the whole round trip finished.
+                    HStack(spacing: DogearSpacing.space2) {
+                        ProgressView()
+                        Text("Refining…")
+                            .font(DogearType.caption)
+                            .foregroundStyle(DogearColor.mutedInk)
+                    }
+                    .padding(.horizontal, DogearSpacing.space5)
                 }
                 if !appliedRefinements.isEmpty {
                     Text("Refined: \(appliedRefinements.joined(separator: ", "))")
@@ -124,6 +145,38 @@ struct VibeSearchView: View {
                 .padding(.horizontal, DogearSpacing.space5)
                 .padding(.vertical, DogearSpacing.space8)
         }
+    }
+
+    /// Design System 0.1 Section 13: "Keep the original query visible as an
+    /// editable editorial quote." Sits right above the results so a reader
+    /// browsing a full grid doesn't have to scroll back to the top of the
+    /// screen to refine or start over — tapping it jumps back to the real
+    /// field and focuses it (decision: only one actual text box exists per
+    /// #13, this is a shortcut back to it, not a second input).
+    private func queryQuote(scrollProxy: ScrollViewProxy) -> some View {
+        Button {
+            withAnimation(DogearMotion.standard) {
+                scrollProxy.scrollTo("promptField", anchor: .top)
+            }
+            fieldFocused = true
+        } label: {
+            HStack(spacing: DogearSpacing.space3) {
+                Text("“\(lastSearchedQuery)”")
+                    .font(DogearType.bodySmall.italic())
+                    .foregroundStyle(DogearColor.ink)
+                    .lineLimit(2)
+                Spacer()
+                Image(systemName: "pencil")
+                    .font(.caption)
+                    .foregroundStyle(DogearColor.brass)
+            }
+            .padding(.horizontal, DogearSpacing.space4)
+            .padding(.vertical, DogearSpacing.space3)
+            .background(DogearColor.linen)
+            .clipShape(RoundedRectangle(cornerRadius: DogearRadius.control))
+        }
+        .buttonStyle(DogearPressStyle())
+        .padding(.horizontal, DogearSpacing.space5)
     }
 
     private var resultsGrid: some View {
@@ -191,7 +244,9 @@ struct VibeSearchView: View {
                 suggestedRefinements = result.suggestedRefinements.filter { !appliedRefinements.contains($0) }
                 hasSearched = true
             } catch {
+                print("[VibeSearchView] search failed: \(error)")
                 searchFailed = true
+                DogearHaptics.failure()
             }
             isSearching = false
         }

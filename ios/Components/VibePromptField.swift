@@ -37,6 +37,12 @@ struct VibePromptField: View {
                 .font(DogearType.body)
                 .foregroundStyle(DogearColor.ink)
                 .lineLimit(1...5)
+                // Design System 0.1 Section 08: "Minimum height 56 pt collapsed;
+                // grows to 120 pt for multiline." Without `.fixedSize`, a
+                // vertical-axis TextField inside a ScrollView can settle at its
+                // maximum line-limit height instead of the actual content height
+                // on first layout — this pins it to its real intrinsic size.
+                .fixedSize(horizontal: false, vertical: true)
                 .focused(isFocused)
                 .submitLabel(.search)
                 .onSubmit(onSubmit)
@@ -80,7 +86,10 @@ struct VibePromptField: View {
     }
 
     private func submitArrow(action: @escaping () -> Void, disabled: Bool) -> some View {
-        Button(action: action) {
+        Button(action: {
+            DogearHaptics.actionArmed()
+            action()
+        }) {
             Image(systemName: "arrow.up")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(DogearColor.paper)

@@ -86,7 +86,13 @@ struct ReadingProgressSheet: View {
                     .background(DogearColor.linen)
                     .clipShape(RoundedRectangle(cornerRadius: DogearRadius.control))
                     .frame(width: 100)
-                Stepper(value: $currentPageInput, in: 0...max(pageCeiling, currentPageInput)) {
+                    // Free typing (e.g. 200 for a 140-page book) was previously
+                    // accepted outright — clamp to the book's actual length as
+                    // soon as it's entered rather than letting it persist.
+                    .onChange(of: currentPageInput) { _, newValue in
+                        currentPageInput = min(max(newValue, 0), pageCeiling)
+                    }
+                Stepper(value: $currentPageInput, in: 0...pageCeiling) {
                     EmptyView()
                 }
                 .labelsHidden()
@@ -138,6 +144,11 @@ struct ReadingProgressSheet: View {
                     )
                     .font(DogearType.bodySmall)
                     .foregroundStyle(DogearColor.ink)
+                    if let pace = pagesPerDayToStayOnTrack {
+                        Text("\(pace) pages a day to stay on track")
+                            .font(DogearType.caption)
+                            .foregroundStyle(DogearColor.mutedInk)
+                    }
                 }
                 .padding(DogearSpacing.space4)
                 .background(DogearColor.linen)
@@ -149,6 +160,17 @@ struct ReadingProgressSheet: View {
             }
         }
         .padding(.horizontal, DogearSpacing.space5)
+    }
+
+    /// (target page − current page) ÷ days remaining until the target date,
+    /// rounded up so the reader is never told less than what's actually
+    /// needed. Reads live @State, so it updates as the sheet's own fields
+    /// change, before anything is saved.
+    private var pagesPerDayToStayOnTrack: Int? {
+        let remainingPages = targetPage - currentPageInput
+        guard remainingPages > 0 else { return 0 }
+        let daysRemaining = max(targetDate.timeIntervalSinceNow / 86400, 1)
+        return Int((Double(remainingPages) / daysRemaining).rounded(.up))
     }
 
     private func save() {

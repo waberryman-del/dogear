@@ -31,6 +31,22 @@ struct RecommendationEngine {
         return request
     }
 
+    /// Runs the request and returns the body, throwing a `BackendError` with the
+    /// status code and response body on anything outside 2xx. Without this, a
+    /// non-2xx response (401 bad shared secret, 500 from an Anthropic-side
+    /// failure, a Vercel-level timeout) falls straight into `JSONDecoder`,
+    /// which throws its own decode error that looks identical, at the call
+    /// site, to a genuine network failure — impossible to tell apart later.
+    private func send(_ request: URLRequest, endpoint: String) async throws -> Data {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            let body = String(data: data, encoding: .utf8) ?? "<non-utf8 body>"
+            print("[RecommendationEngine] \(endpoint) returned HTTP \(http.statusCode): \(body)")
+            throw BackendError.httpError(endpoint: endpoint, status: http.statusCode, body: body)
+        }
+        return data
+    }
+
     /// Most-recent-first — both backend prompts are told explicitly that this
     /// ordering means "weight recent shelf placements more heavily" (decision #9).
     private func readHistoryPayload(from library: [LibraryEntry]) -> [[String: Any]] {
@@ -85,9 +101,13 @@ struct RecommendationEngine {
         // recommend.js's vercel.json maxDuration is 60s — 75s gives real
         // headroom so the client always outlasts the server's own hard cap.
         let request = try makeRequest(path: "recommend", body: payload, timeout: 75)
-        let (data, _) = try await URLSession.shared.data(for: request)
-        let decoded = try JSONDecoder().decode(RecommendationResponse.self, from: data)
-        return decoded.rows
+        let data = try await send(request, endpoint: "recommend")
+        do {
+            return try JSONDecoder().decode(RecommendationResponse.self, from: data).rows
+        } catch {
+            print("[RecommendationEngine] recommend decode failed: \(error) — raw: \(String(data: data, encoding: .utf8) ?? "<non-utf8>")")
+            throw error
+        }
     }
 
     /// Phase 2: free-text mood/vibe search, blended with the reader's actual
@@ -113,9 +133,14 @@ struct RecommendationEngine {
 
         // Same 60s vercel.json maxDuration as recommend.js — same 75s headroom.
         let request = try makeRequest(path: "vibe-search", body: payload, timeout: 75)
-        let (data, _) = try await URLSession.shared.data(for: request)
-        let decoded = try JSONDecoder().decode(VibeSearchResponse.self, from: data)
-        return VibeSearchResult(results: decoded.results, suggestedRefinements: decoded.refinements)
+        let data = try await send(request, endpoint: "vibe-search")
+        do {
+            let decoded = try JSONDecoder().decode(VibeSearchResponse.self, from: data)
+            return VibeSearchResult(results: decoded.results, suggestedRefinements: decoded.refinements)
+        } catch {
+            print("[RecommendationEngine] vibe-search decode failed: \(error) — raw: \(String(data: data, encoding: .utf8) ?? "<non-utf8>")")
+            throw error
+        }
     }
 
     func generateWhyYouLikedIt(for entry: LibraryEntry) async throws -> String {
@@ -126,9 +151,20 @@ struct RecommendationEngine {
             "still_enjoying_midpoint": (entry.midpointCheckIn?.stillEnjoying as Any?) ?? NSNull(),
             "highlights": entry.highlights.map { $0.text }
         ], timeout: 20)
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let data = try await send(request, endpoint: "why-liked-it")
         let decoded = try JSONDecoder().decode([String: String].self, from: data)
         return decoded["note"] ?? ""
+    }
+}
+
+enum BackendError: LocalizedError {
+    case httpError(endpoint: String, status: Int, body: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .httpError(let endpoint, let status, let body):
+            return "\(endpoint) returned HTTP \(status): \(body)"
+        }
     }
 }
 

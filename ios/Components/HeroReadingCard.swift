@@ -14,6 +14,7 @@ struct HeroReadingCard: View {
     @EnvironmentObject var library: LibraryStore
     @State private var showProgressSheet = false
     @State private var showStartSheet = false
+    @State private var showSwitchOptions = false
 
     var body: some View {
         Group {
@@ -32,6 +33,19 @@ struct HeroReadingCard: View {
         .sheet(isPresented: $showStartSheet) {
             StartReadingSheet()
                 .environmentObject(library)
+        }
+        .confirmationDialog(
+            "Change currently reading", isPresented: $showSwitchOptions, titleVisibility: .visible
+        ) {
+            if let entry = library.currentlyReadingEntry {
+                Button("Read something else") {
+                    library.stopReading(entry.book.id)
+                    showStartSheet = true
+                }
+                Button("Stop reading this", role: .destructive) {
+                    library.stopReading(entry.book.id)
+                }
+            }
         }
     }
 
@@ -78,6 +92,19 @@ struct HeroReadingCard: View {
             .clipShape(RoundedRectangle(cornerRadius: DogearRadius.card))
         }
         .buttonStyle(DogearPressStyle())
+        .overlay(alignment: .topTrailing) {
+            Button {
+                showSwitchOptions = true
+            } label: {
+                Image(systemName: "ellipsis.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(DogearColor.mutedInk)
+                    .padding(DogearSpacing.space2)
+            }
+            .buttonStyle(DogearPressStyle())
+            .padding(.trailing, DogearSpacing.space5 + DogearSpacing.space2)
+            .padding(.top, DogearSpacing.space2)
+        }
         .padding(.horizontal, DogearSpacing.space5)
     }
 

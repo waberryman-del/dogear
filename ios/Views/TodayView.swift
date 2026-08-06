@@ -24,6 +24,14 @@ struct TodayView: View {
             .background(DogearColor.paper)
             .toolbar(.hidden, for: .navigationBar)
             .task { await library.loadTodayFeedIfNeeded() }
+            .refreshable {
+                await library.loadTodayFeedIfNeeded()
+                if library.recommendationsLoadFailed {
+                    DogearHaptics.failure()
+                } else {
+                    DogearHaptics.success()
+                }
+            }
             .sheet(item: $selectedRecommendation) { rec in
                 BookDetailView(book: rec.book, reason: rec.reason)
                     .environmentObject(library)

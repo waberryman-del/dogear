@@ -12,6 +12,7 @@
 		12AFF6743E64F9705DD728C3 /* RecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A9F16DD3CD8D378DC9171F3 /* RecommendationEngine.swift */; };
 		1662CDEAE4E315CAED701BDF /* HeroReadingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D644A147FCC71CC5607C8660 /* HeroReadingCard.swift */; };
 		1BA3B9778421AC55C039B087 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50BF150706FFE909DAB55 /* Motion.swift */; };
+		D13A769E327647058F564B89 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26A0A3F1810548BA819DA260 /* Haptics.swift */; };
 		2922FB03A48C45097C9A4DA1 /* RecommendationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D13E0C4958AB37EB52984106 /* RecommendationCard.swift */; };
 		38A62EFB30E62C717A02B6CE /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388C1C21E294ED14AA91D0F1 /* AppRootView.swift */; };
 		3E5267540396AB4614DC2C3F /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E2C7C1C2BF4B577E773EFB /* TodayView.swift */; };
@@ -59,6 +60,7 @@
 		AAC7FFAC87AA1DCC75863205 /* RecommendationRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationRowView.swift; sourceTree = "<group>"; };
 		AE00C107C2C38F6FEE7C1E59 /* RecommendationGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationGrid.swift; sourceTree = "<group>"; };
 		B4C50BF150706FFE909DAB55 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
+		26A0A3F1810548BA819DA260 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		C28169EC0586B53F9F89B2E7 /* Book.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
 		C773F1E1E925E5A15625A1FA /* OtherViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherViews.swift; sourceTree = "<group>"; };
 		CF13DB9134922F21AE8E6542 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
@@ -91,6 +93,7 @@
 			isa = PBXGroup;
 			children = (
 				2497FF2C26F550143C1F1F38 /* Color+Dogear.swift */,
+				26A0A3F1810548BA819DA260 /* Haptics.swift */,
 				B4C50BF150706FFE909DAB55 /* Motion.swift */,
 				E16F6AC22B60693A1A58E39A /* Radius.swift */,
 				ECDE17B4346A1DF9B84CE8CF /* Spacing.swift */,
@@ -263,6 +266,7 @@
 				1662CDEAE4E315CAED701BDF /* HeroReadingCard.swift in Sources */,
 				72F4086F52113856D4DA9D33 /* LibraryStore.swift in Sources */,
 				1BA3B9778421AC55C039B087 /* Motion.swift in Sources */,
+				D13A769E327647058F564B89 /* Haptics.swift in Sources */,
 				11D82512F84BEF5AB3255AF9 /* MyShelfView.swift in Sources */,
 				58AF95D724B9D74D65C38A11 /* OnboardingView.swift in Sources */,
 				FFE1209072A046D943853A12 /* OtherViews.swift in Sources */,
