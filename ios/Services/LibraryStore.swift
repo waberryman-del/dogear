@@ -44,6 +44,7 @@ final class LibraryStore: ObservableObject {
 
     private let recEngine = RecommendationEngine()
     private let defaults = UserDefaults.standard
+    private let entriesKey = "dogear.entries"
     private let hasOnboardedKey = "dogear.hasCompletedOnboarding"
     private let onboardingGenresKey = "dogear.onboardingGenres"
     private let shownBooksKey = "dogear.shownBooks"
@@ -73,6 +74,10 @@ final class LibraryStore: ObservableObject {
     private var isVibeSearchInFlight = false
 
     init() {
+        if let data = defaults.data(forKey: entriesKey),
+           let decoded = try? JSONDecoder().decode([LibraryEntry].self, from: data) {
+            entries = decoded
+        }
         hasCompletedOnboarding = defaults.bool(forKey: hasOnboardedKey)
         if let saved = defaults.array(forKey: onboardingGenresKey) as? [String] {
             onboardingGenres = Set(saved.compactMap(Genre.init(rawValue:)))
@@ -128,6 +133,7 @@ final class LibraryStore: ObservableObject {
             dateFinished: nil, shelfPlacement: nil,
             aiWhyYouLikedIt: nil, midpointCheckIn: nil, highlights: []
         ))
+        persistEntries()
     }
 
     /// Undo for `addToShelf` — the only shelf-entry lifecycle that exists before
@@ -135,6 +141,7 @@ final class LibraryStore: ObservableObject {
     /// entry outright rather than trying to model an in-between state.
     func removeFromShelf(_ bookID: String) {
         entries.removeAll { $0.book.id == bookID }
+        persistEntries()
     }
 
     func startReading(_ bookID: String) {
@@ -148,6 +155,7 @@ final class LibraryStore: ObservableObject {
             askedOn: Calendar.current.date(byAdding: .day, value: 5, to: .now) ?? .now,
             stillEnjoying: nil
         )
+        persistEntries()
     }
 
     /// Stops the current read from the hero card without going through shelf
@@ -163,6 +171,7 @@ final class LibraryStore: ObservableObject {
         entries[idx].currentPage = nil
         entries[idx].readingGoal = nil
         entries[idx].midpointCheckIn = nil
+        persistEntries()
     }
 
     // MARK: - Midpoint check-in
@@ -170,6 +179,7 @@ final class LibraryStore: ObservableObject {
     func answerMidpointCheckIn(_ bookID: String, stillEnjoying: Bool) {
         guard let idx = entries.firstIndex(where: { $0.book.id == bookID }) else { return }
         entries[idx].midpointCheckIn?.stillEnjoying = stillEnjoying
+        persistEntries()
         // Deliberately does NOT trigger a recommendation refresh — refresh is earned only
         // by finishing/shelving a book. A check-in is a signal for the *next* recommend()
         // call, not a refresh trigger itself.
@@ -185,6 +195,7 @@ final class LibraryStore: ObservableObject {
         if let note = try? await recEngine.generateWhyYouLikedIt(for: entries[idx]) {
             entries[idx].aiWhyYouLikedIt = note
         }
+        persistEntries()
         DogearHaptics.actionCommitted()  // Design System Section 10: "Book placed on shelf → medium impact"
         await performRefresh(blocking: true)   // earned refresh
     }
@@ -316,6 +327,12 @@ final class LibraryStore: ObservableObject {
         }
     }
 
+    private func persistEntries() {
+        if let data = try? JSONEncoder().encode(entries) {
+            defaults.set(data, forKey: entriesKey)
+        }
+    }
+
     // MARK: - Search's row-browsing engine (decision #25 — this used to be
     // "Today's feed"; the underlying engine/state below wasn't rewritten, it
     // was relocated. Names below (e.g. `loadTodayFeedIfNeeded`) are known
@@ -401,12 +418,14 @@ final class LibraryStore: ObservableObject {
     func updateCurrentPage(_ page: Int, for bookID: String) {
         guard let idx = entries.firstIndex(where: { $0.book.id == bookID }) else { return }
         entries[idx].currentPage = page
+        persistEntries()
     }
 
     /// `goal: nil` clears an existing goal.
     func setReadingGoal(_ goal: ReadingGoal?, for bookID: String) {
         guard let idx = entries.firstIndex(where: { $0.book.id == bookID }) else { return }
         entries[idx].readingGoal = goal
+        persistEntries()
     }
 
     /// Today's hero card is singular — if more than one book is somehow
