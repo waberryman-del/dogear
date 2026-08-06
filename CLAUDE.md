@@ -109,13 +109,19 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
    reason well about this specific reader/query," take the slower, better-reasoned
    path. This is explicitly the thing meant to beat other book trackers — don't let
    it regress to generic genre-matching to save time.
-8. **Never recommend a book the reader has already been shown**, not just books
-   already on their shelf. Maintain a persisted, growing list of every book ID ever
-   surfaced by either `recommend.js` or `vibe-search.js` (call it something like
-   `shownBookIDs` in `LibraryStore`), sent as an explicit exclusion list on every
-   request to both endpoints. "Already read" and "already shown" are two different
-   lists — a book can be shown and passed over without being added, and it still
-   shouldn't come back.
+8. 8. **[AMENDED after real-usage data] Never recommend a book already on the
+   reader's shelf** (any status: want-to-read, reading, finished, dnf) — this
+   never changes, no exceptions. For books already *shown* but not shelved
+   (`shownBookIDs`): the default is still never-repeat. However, if a
+   request would return fewer than the minimum floor even after the
+   existing retry, the backend may backfill remaining slots from the
+   oldest entries in `shownBookIDs` (least-recently-shown first) rather
+   than returning a thin or empty result. This is a scarcity fallback that
+   only activates when real usage has genuinely exhausted fresh
+   candidates — exactly the "user behavior warrants it" condition Walker
+   specified — not a default aging or capping policy. Log whenever this
+   fallback actually fires, so we can see how often it's really needed
+   rather than guessing.
 9. **Reading history sent to the backend must be recency-ordered, and the prompts
    must say so explicitly** — e.g. "entries below are ordered most-recent-first;
    weight recent shelf placements more heavily than old ones, and if the pattern
