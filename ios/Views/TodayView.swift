@@ -21,9 +21,19 @@ struct TodayView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: DogearSpacing.space8) {
                     header
-                    HeroReadingCard()
-                    if !library.allTodaysPicksDecided {
-                        dailyPicksSection
+                    // Design brief: once all 3 picks are decided, the small
+                    // floating hero card in otherwise-empty space becomes the
+                    // full-bleed hero moment instead. Only when there's an
+                    // actual currently-reading book — otherwise this falls
+                    // through to the compact HeroReadingCard, which already
+                    // handles its own "nothing in progress" empty state.
+                    if library.allTodaysPicksDecided, let entry = library.currentlyReadingEntry {
+                        TodayHeroMoment(entry: entry)
+                    } else {
+                        HeroReadingCard()
+                        if !library.allTodaysPicksDecided {
+                            dailyPicksSection
+                        }
                     }
                 }
                 .padding(.vertical, DogearSpacing.space6)
@@ -69,26 +79,17 @@ struct TodayView: View {
         }
     }
 
+    // Decision #12/#24: the old "My shelf" header link was a workaround from
+    // when Shelf wasn't a real tab. It is now (RootTabView), so this link
+    // was just a redundant second path to the same destination — removed.
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: DogearSpacing.space1) {
-                Text("DOGEAR")
-                    .font(DogearType.caption).tracking(2)
-                    .foregroundStyle(DogearColor.brass)
-                Text(greeting)
-                    .font(DogearType.titleItalic)
-                    .foregroundStyle(DogearColor.ink)
-            }
-            Spacer()
-            NavigationLink {
-                MyShelfView()
-            } label: {
-                VStack(spacing: 2) {
-                    Image(systemName: "books.vertical")
-                    Text("My shelf").font(DogearType.caption)
-                }
+        VStack(alignment: .leading, spacing: DogearSpacing.space1) {
+            Text("DOGEAR")
+                .font(DogearType.caption).tracking(2)
+                .foregroundStyle(DogearColor.brass)
+            Text(greeting)
+                .font(DogearType.titleItalic)
                 .foregroundStyle(DogearColor.ink)
-            }
         }
         .padding(.horizontal, DogearSpacing.space5)
     }

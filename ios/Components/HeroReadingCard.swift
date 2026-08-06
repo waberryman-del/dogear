@@ -69,15 +69,15 @@ struct HeroReadingCard: View {
                         Text(entry.book.author)
                             .font(DogearType.bodySmall)
                             .foregroundStyle(DogearColor.mutedInk)
-                        if let page = entry.currentPage {
-                            Text(pageStatusText(entry: entry, currentPage: page))
+                        if let statusText = entry.pageStatusText {
+                            Text(statusText)
                                 .font(DogearType.caption)
                                 .foregroundStyle(DogearColor.mutedInk)
                         }
                     }
                     Spacer()
                 }
-                if let fraction = progressFraction(for: entry) {
+                if let fraction = entry.progressFraction {
                     progressBar(fraction: fraction)
                 } else {
                     Text("Tap to add your current page")
@@ -139,37 +139,4 @@ struct HeroReadingCard: View {
         .frame(height: 6)
     }
 
-    private func progressFraction(for entry: LibraryEntry) -> Double? {
-        guard let currentPage = entry.currentPage else { return nil }
-        guard let denominator = entry.readingGoal?.targetPage ?? entry.book.pageCount,
-              denominator > 0 else { return nil }
-        return min(Double(currentPage) / Double(denominator), 1.0)
-    }
-
-    private func pageStatusText(entry: LibraryEntry, currentPage: Int) -> String {
-        var parts: [String] = []
-        if let total = entry.readingGoal?.targetPage ?? entry.book.pageCount {
-            parts.append("Page \(currentPage) of \(total)")
-        } else {
-            parts.append("Page \(currentPage)")
-        }
-        if let pace = paceStatus(for: entry) {
-            parts.append(pace)
-        }
-        return parts.joined(separator: " · ")
-    }
-
-    /// "On track" / "Behind pace" from current page vs. where the goal's
-    /// timeline implies the reader should be today (decision #18). Needs a
-    /// goal, a logged page, and a start date to compare against — silent
-    /// otherwise rather than guessing.
-    private func paceStatus(for entry: LibraryEntry) -> String? {
-        guard let goal = entry.readingGoal,
-              let currentPage = entry.currentPage,
-              let startDate = entry.dateStartedReading else { return nil }
-        let totalDays = max(goal.targetDate.timeIntervalSince(startDate) / 86400, 1)
-        let elapsedDays = min(max(Date.now.timeIntervalSince(startDate) / 86400, 0), totalDays)
-        let expectedPage = (elapsedDays / totalDays) * Double(goal.targetPage)
-        return Double(currentPage) >= expectedPage ? "On track" : "Behind pace"
-    }
 }

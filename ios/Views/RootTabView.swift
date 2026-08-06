@@ -9,18 +9,19 @@ import SwiftUI
 struct RootTabView: View {
     var body: some View {
         TabView {
+            // Icons matched to docs/brand-board.png's iconography row
+            // (house / magnifying glass / sparkle / library / person).
             TodayView()
-                .tabItem { Label("Today", systemImage: "sparkles") }
+                .tabItem { Label("Today", systemImage: "house") }
             SearchView()
                 .tabItem { Label("Search", systemImage: "text.magnifyingglass") }
             VibeSearchView()
-                .tabItem { Label("Find", systemImage: "magnifyingglass") }
-            // MyShelfView doesn't wrap itself in a NavigationStack — it was
-            // built to be pushed inside Today's existing stack (see Today's
-            // header "My shelf" link, still there and left as-is). Wrapping
-            // it here rather than in MyShelfView itself avoids a nested
-            // NavigationStack (and a second nav bar) when that push path
-            // is used, while still giving the tab root its own nav context.
+                .tabItem { Label("Find", systemImage: "sparkles") }
+            // MyShelfView doesn't wrap itself in a NavigationStack — Today's
+            // header used to push it into its own stack, but that link is
+            // gone now that Shelf is a real tab (its sole caller now).
+            // Wrapping it here rather than in MyShelfView itself keeps that
+            // choice local to this one call site.
             NavigationStack { MyShelfView() }
                 .tabItem { Label("Shelf", systemImage: "books.vertical") }
             ProfileView()

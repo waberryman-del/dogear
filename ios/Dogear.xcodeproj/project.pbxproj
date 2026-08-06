@@ -11,6 +11,7 @@
 		11D82512F84BEF5AB3255AF9 /* MyShelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CDD781F4982ECA991B971D3 /* MyShelfView.swift */; };
 		12AFF6743E64F9705DD728C3 /* RecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A9F16DD3CD8D378DC9171F3 /* RecommendationEngine.swift */; };
 		1662CDEAE4E315CAED701BDF /* HeroReadingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D644A147FCC71CC5607C8660 /* HeroReadingCard.swift */; };
+		1E163D0E3B494C8F9B3E58CD /* TodayHeroMoment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 413E1FDD4AB54135A57F2B7A /* TodayHeroMoment.swift */; };
 		FF00F9F6045A471F8634558E /* DailyPickCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C8D8F6448EE40BFA597CF80 /* DailyPickCard.swift */; };
 		1BA3B9778421AC55C039B087 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50BF150706FFE909DAB55 /* Motion.swift */; };
 		D13A769E327647058F564B89 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26A0A3F1810548BA819DA260 /* Haptics.swift */; };
@@ -72,6 +73,7 @@
 		D13E0C4958AB37EB52984106 /* RecommendationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationCard.swift; sourceTree = "<group>"; };
 		D368EFF48A6CEAB5DF0A7252 /* LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryStore.swift; sourceTree = "<group>"; };
 		D644A147FCC71CC5607C8660 /* HeroReadingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroReadingCard.swift; sourceTree = "<group>"; };
+		413E1FDD4AB54135A57F2B7A /* TodayHeroMoment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayHeroMoment.swift; sourceTree = "<group>"; };
 		5C8D8F6448EE40BFA597CF80 /* DailyPickCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyPickCard.swift; sourceTree = "<group>"; };
 		DA778A5AF4BFC532B3CBA34A /* BookDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailView.swift; sourceTree = "<group>"; };
 		E16F6AC22B60693A1A58E39A /* Radius.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Radius.swift; sourceTree = "<group>"; };
@@ -140,6 +142,7 @@
 				3AA3C2B3FCF9D998576CAF09 /* DogearChip.swift */,
 				D644A147FCC71CC5607C8660 /* HeroReadingCard.swift */,
 				5C8D8F6448EE40BFA597CF80 /* DailyPickCard.swift */,
+				413E1FDD4AB54135A57F2B7A /* TodayHeroMoment.swift */,
 				9B22962813AF30BE67878732 /* ReadingProgressSheet.swift */,
 				AE00C107C2C38F6FEE7C1E59 /* RecommendationGrid.swift */,
 				AAC7FFAC87AA1DCC75863205 /* RecommendationRowView.swift */,
@@ -274,6 +277,7 @@
 				407E6592C9286CBAD23CEF2B /* DogearChip.swift in Sources */,
 				1662CDEAE4E315CAED701BDF /* HeroReadingCard.swift in Sources */,
 				FF00F9F6045A471F8634558E /* DailyPickCard.swift in Sources */,
+				1E163D0E3B494C8F9B3E58CD /* TodayHeroMoment.swift in Sources */,
 				72F4086F52113856D4DA9D33 /* LibraryStore.swift in Sources */,
 				1BA3B9778421AC55C039B087 /* Motion.swift in Sources */,
 				D13A769E327647058F564B89 /* Haptics.swift in Sources */,

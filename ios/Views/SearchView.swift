@@ -170,14 +170,18 @@ struct SearchView: View {
         }
     }
 
+    /// CONFIRMED (code inspection): during a pull-to-refresh, this banner's
+    /// own `ProgressView` rendered at the same time as iOS's own native
+    /// pull-to-refresh spinner — `.refreshable` shows that automatically for
+    /// the whole duration of its action, outside this view's control. Two
+    /// spinners stacked was the actual bug; text-only here keeps the one
+    /// piece this banner adds (real copy for what's a genuinely long wait)
+    /// without a second competing spinner glyph.
     private var refreshingBanner: some View {
-        HStack(spacing: DogearSpacing.space2) {
-            ProgressView()
-            Text("Finding new books for you…")
-                .font(DogearType.bodySmall)
-                .foregroundStyle(DogearColor.mutedInk)
-        }
-        .padding(.horizontal, DogearSpacing.space5)
+        Text("Finding new books for you…")
+            .font(DogearType.bodySmall)
+            .foregroundStyle(DogearColor.mutedInk)
+            .padding(.horizontal, DogearSpacing.space5)
     }
 
     private var exhaustedState: some View {

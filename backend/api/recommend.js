@@ -81,7 +81,7 @@ Rules:
   the backend (not you) may occasionally backfill an old shown_books entry itself when a
   row is genuinely exhausted, but that's a fallback outside your own picks.
 - Prefer specificity over safety: real, findable, in-print books only. No invented titles.
-- Return 5-6 books for this row when you can find them; 4 is the acceptable floor if
+- Return 5-6 books for this row when you can find them; 3 is the acceptable floor if
   shown_books has genuinely exhausted every reasonable match — reaching for that floor too
   early instead of broadening your interpretation of the pattern triggers a slower retry,
   so aim for 5-6 up front.
@@ -180,7 +180,16 @@ async function generateRow(assignment, historyText) {
 // about what still counts as "the same pattern" once the obvious picks are
 // excluded. This is the actual cause (not a dedup bug — verified by checking
 // that empty final rows already had zero books before dedup ever runs).
-const MIN_BOOKS_PER_ROW = 4;
+//
+// CONFIRMED with real evidence (reproduced against production): a 60-book
+// exclusion list took 52.3s — one row's label came back as the hardcoded
+// "More you might like" backfill fallback, proving that row's first attempt
+// AND its retry both failed outright before backfill covered it, i.e. two
+// full sequential Claude calls for that one row alone. Retry is the direct
+// cost of speed here, so lowering the floor that triggers it (was 4) cuts
+// how often the second sequential call fires at all for the common case,
+// while backfill (below) still guarantees this floor is met regardless.
+const MIN_BOOKS_PER_ROW = 3;
 
 const BROADEN_RETRY_HINT = `
 
@@ -189,7 +198,7 @@ the exclusion list is large. For this attempt, allow slightly broader matches wi
 same overall taste pattern — related subgenres, adjacent authors, a looser reading of
 what counts as "the same pattern" — rather than returning few or no books. The hard
 exclusions do not change: still never recommend anything in read_history or shown_books.
-Only how broadly you interpret the pattern itself should loosen. Return 4-6 books.`;
+Only how broadly you interpret the pattern itself should loosen. Return 3-6 books.`;
 
 // CLAUDE.md decision #8 (amended): a shelved book (any status) is never
 // backfilled, no exceptions — the default for a shown-but-not-shelved book is

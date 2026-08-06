@@ -66,6 +66,46 @@ struct ReadingGoal: Codable, Equatable {
     var targetDate: Date
 }
 
+/// Shared progress/pace math — originally private to `HeroReadingCard`,
+/// pulled out here once the post-decision full-bleed hero (design brief,
+/// decision #24 follow-up) needed the exact same calculations.
+extension LibraryEntry {
+    var progressFraction: Double? {
+        guard let currentPage else { return nil }
+        guard let denominator = readingGoal?.targetPage ?? book.pageCount,
+              denominator > 0 else { return nil }
+        return min(Double(currentPage) / Double(denominator), 1.0)
+    }
+
+    /// "On track" / "Behind pace" from current page vs. where the goal's
+    /// timeline implies the reader should be today (decision #18). Needs a
+    /// goal, a logged page, and a start date to compare against — nil
+    /// otherwise rather than guessing.
+    var paceStatus: String? {
+        guard let goal = readingGoal,
+              let currentPage,
+              let startDate = dateStartedReading else { return nil }
+        let totalDays = max(goal.targetDate.timeIntervalSince(startDate) / 86400, 1)
+        let elapsedDays = min(max(Date.now.timeIntervalSince(startDate) / 86400, 0), totalDays)
+        let expectedPage = (elapsedDays / totalDays) * Double(goal.targetPage)
+        return Double(currentPage) >= expectedPage ? "On track" : "Behind pace"
+    }
+
+    var pageStatusText: String? {
+        guard let currentPage else { return nil }
+        var parts: [String] = []
+        if let total = readingGoal?.targetPage ?? book.pageCount {
+            parts.append("Page \(currentPage) of \(total)")
+        } else {
+            parts.append("Page \(currentPage)")
+        }
+        if let pace = paceStatus {
+            parts.append(pace)
+        }
+        return parts.joined(separator: " · ")
+    }
+}
+
 /// One check-in per book, fixed 5 days after dateStartedReading. Yes/no only —
 /// feeds the recommendation engine a signal before the reader even finishes.
 struct MidpointCheckIn: Codable, Equatable {

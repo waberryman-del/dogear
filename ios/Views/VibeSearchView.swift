@@ -1,6 +1,14 @@
 import SwiftUI
 import UIKit
 
+/// One of the 5 rotating prompt bubbles on Vibe Search (brand board design
+/// brief) — universal and evocative, deliberately not personalized.
+private struct VibePromptSuggestion: Identifiable {
+    let id = UUID()
+    let text: String
+    let icon: String
+}
+
 /// Phase 2 spec: free text only, no genre dropdown alongside it — the text box IS
 /// the whole interface. Reuses RecommendationCard + BookDetailView from Today
 /// rather than a parallel UI system. A dedicated screen (not a bar bolted onto
@@ -26,27 +34,44 @@ struct VibeSearchView: View {
     /// search, which needs different, honest copy (see `content`).
     @State private var resultsExhaustedByExclusion = false
     @State private var selectedResult: Recommendation?
-    @State private var exampleIndex = 0
     @FocusState private var fieldFocused: Bool
 
-    private let exampleQueries = [
-        "It just started raining.",
-        "A book that feels like October.",
-        "Something ambitious, lonely, and beautiful.",
-        "I want to disappear into another world."
+    /// Brand board (docs/brand-board.png), design brief: exactly 5 prompts
+    /// shown at once, rotating as a whole set from a larger pool — not the
+    /// old one-at-a-time carousel. Deliberately universal/evocative and NOT
+    /// derived from the reader's own data (unlike the AI-generated
+    /// refinements below, which are), matching the board's own example tone.
+    private static let promptPool: [VibePromptSuggestion] = [
+        .init(text: "It just started raining.", icon: "cloud.rain"),
+        .init(text: "I need hope.", icon: "sun.max"),
+        .init(text: "I want to disappear into another world.", icon: "sparkles"),
+        .init(text: "A book that feels like October.", icon: "leaf"),
+        .init(text: "Give me something that hurts (in a good way).", icon: "heart"),
+        .init(text: "Something ambitious, lonely, and beautiful.", icon: "moon.stars"),
+        .init(text: "A slow Sunday kind of book.", icon: "cup.and.saucer"),
+        .init(text: "I want to fall in love with someone on the page.", icon: "heart.circle"),
+        .init(text: "Something that will keep me up too late.", icon: "flashlight.on.fill"),
+        .init(text: "A book that feels like coming home.", icon: "house"),
+        .init(text: "I need to laugh.", icon: "face.smiling"),
+        .init(text: "Take me somewhere I've never been.", icon: "airplane"),
     ]
+    @State private var visiblePrompts: [VibePromptSuggestion] = Array(VibeSearchView.promptPool.shuffled().prefix(5))
 
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
                 ScrollView {
+                    // Brand board order: large headline, then the 5 prompt
+                    // bubbles, then the free-text field at the bottom —
+                    // reordered from the field-then-example layout this used
+                    // to have.
                     VStack(alignment: .leading, spacing: DogearSpacing.space6) {
                         header
+                        if !hasSearched && !isSearching {
+                            promptBubbles
+                        }
                         promptField
                             .id("promptField")
-                        if !hasSearched && !isSearching {
-                            examplePrompt
-                        }
                         content(scrollProxy: proxy)
                     }
                     .padding(.vertical, DogearSpacing.space6)
@@ -79,16 +104,12 @@ struct VibeSearchView: View {
         }
     }
 
+    /// Brand board: large serif headline alone, no small caption above it.
     private var header: some View {
-        VStack(alignment: .leading, spacing: DogearSpacing.space1) {
-            Text("DESCRIBE THE READ")
-                .font(DogearType.caption).tracking(2)
-                .foregroundStyle(DogearColor.brass)
-            Text("What are you in the mood for?")
-                .font(DogearType.titleItalic)
-                .foregroundStyle(DogearColor.ink)
-        }
-        .padding(.horizontal, DogearSpacing.space5)
+        Text("What are you in the mood for?")
+            .font(DogearType.displayL).italic()
+            .foregroundStyle(DogearColor.ink)
+            .padding(.horizontal, DogearSpacing.space5)
     }
 
     private var promptField: some View {
@@ -96,32 +117,43 @@ struct VibeSearchView: View {
             .padding(.horizontal, DogearSpacing.space5)
     }
 
-    private var examplePrompt: some View {
-        Button {
-            query = exampleQueries[exampleIndex]
-            search()
-        } label: {
-            HStack(spacing: DogearSpacing.space2) {
-                Image(systemName: "sparkle")
-                    .font(.caption2)
-                    .foregroundStyle(DogearColor.brass)
-                Text(exampleQueries[exampleIndex])
-                    .font(DogearType.bodySmall.italic())
-                    .foregroundStyle(DogearColor.mutedInk)
+    private var promptBubbles: some View {
+        VStack(spacing: DogearSpacing.space2) {
+            ForEach(visiblePrompts) { prompt in
+                Button {
+                    query = prompt.text
+                    search()
+                } label: {
+                    HStack(spacing: DogearSpacing.space3) {
+                        Image(systemName: prompt.icon)
+                            .font(.system(size: 15))
+                            .foregroundStyle(DogearColor.brass)
+                            .frame(width: 20)
+                        Text(prompt.text)
+                            .font(DogearType.body)
+                            .foregroundStyle(DogearColor.ink)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, DogearSpacing.space4)
+                    .padding(.vertical, DogearSpacing.space3)
+                    .frame(maxWidth: .infinity)
+                    .background(DogearColor.linen)
+                    .clipShape(RoundedRectangle(cornerRadius: DogearRadius.control))
+                }
+                .buttonStyle(DogearPressStyle())
             }
         }
-        .buttonStyle(DogearPressStyle())
         .padding(.horizontal, DogearSpacing.space5)
-        .id(exampleIndex)
+        .id(visiblePrompts.map(\.id))
         .transition(.opacity)
-        .onReceive(Timer.publish(every: 3.5, on: .main, in: .common).autoconnect()) { _ in
+        .onReceive(Timer.publish(every: 8, on: .main, in: .common).autoconnect()) { _ in
             // Skip the rotation while the field is focused — an animated state
             // change landing in the same run-loop tick as the keyboard's
             // focus-in animation was competing with it and adding a visible
             // beat before the keyboard appeared.
             guard !fieldFocused else { return }
             withAnimation(DogearMotion.standard) {
-                exampleIndex = (exampleIndex + 1) % exampleQueries.count
+                visiblePrompts = Array(Self.promptPool.shuffled().prefix(5))
             }
         }
     }
