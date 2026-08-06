@@ -99,20 +99,29 @@ struct RecommendationEngine {
         library.map { ["title": $0.book.title, "author": $0.book.author] }
     }
 
+    /// Decision #27: books explicitly dismissed from a daily pick — a real
+    /// but moderate negative signal, sent to both `daily-picks.js` and
+    /// `recommend.js` so Search's rows factor it in too.
+    private func notInterestedPayload(_ notInterestedBooks: [NotInterestedRecord]) -> [[String: String]] {
+        notInterestedBooks.map { ["title": $0.title, "author": $0.author] }
+    }
+
     /// Returns Today's feed as labeled rows (decision #19) rather than a flat
     /// list — 1-3 taste rows grounded in specific patterns from the reader's
     /// history plus exactly one discovery row, per `recommend.js`'s prompt.
     func nextPicks(
         basedOn library: [LibraryEntry],
         onboardingGenres: Set<Genre>,
-        shownBooks: [ShownBookRecord]
+        shownBooks: [ShownBookRecord],
+        notInterestedBooks: [NotInterestedRecord]
     ) async throws -> [RecommendationRow] {
         let payload: [String: Any] = [
             "onboarding_genres": onboardingGenres.map { $0.rawValue },
             "read_history": readHistoryPayload(from: library),
             "currently_reading": currentlyReadingPayload(from: library),
             "shown_books": shownBooksPayload(shownBooks),
-            "shelved_books": shelvedBooksPayload(from: library)
+            "shelved_books": shelvedBooksPayload(from: library),
+            "not_interested": notInterestedPayload(notInterestedBooks)
         ]
 
         // recommend.js's vercel.json maxDuration is 60s — 75s gives real
@@ -165,6 +174,54 @@ struct RecommendationEngine {
         }
     }
 
+    /// Decision #24: Today's once-daily 3 picks — a single, much smaller
+    /// generation task than `nextPicks()`'s three-row taxonomy, deliberately
+    /// a flat `[Recommendation]` with no row/kind shape.
+    func dailyPicks(
+        basedOn library: [LibraryEntry],
+        onboardingGenres: Set<Genre>,
+        shownBooks: [ShownBookRecord],
+        notInterestedBooks: [NotInterestedRecord]
+    ) async throws -> [Recommendation] {
+        let payload: [String: Any] = [
+            "onboarding_genres": onboardingGenres.map { $0.rawValue },
+            "read_history": readHistoryPayload(from: library),
+            "currently_reading": currentlyReadingPayload(from: library),
+            "shown_books": shownBooksPayload(shownBooks),
+            "shelved_books": shelvedBooksPayload(from: library),
+            "not_interested": notInterestedPayload(notInterestedBooks)
+        ]
+
+        // daily-picks.js's vercel.json maxDuration is 60s — 75s gives real
+        // headroom, same margin as recommend.js/vibe-search.js.
+        let request = try makeRequest(path: "daily-picks", body: payload, timeout: 75)
+        let data = try await send(request, endpoint: "daily-picks")
+        do {
+            return try JSONDecoder().decode(DailyPicksResponse.self, from: data).picks
+        } catch {
+            print("[RecommendationEngine] daily-picks decode failed: \(error) — raw: \(String(data: data, encoding: .utf8) ?? "<non-utf8>")")
+            throw error
+        }
+    }
+
+    /// Decision #25: real title/author/ISBN search against the same
+    /// two-source metadata lookup used elsewhere — no AI reasoning, no
+    /// Anthropic call at all. Hits `book-search.js`, a distinct endpoint
+    /// from the two reasoning ones above.
+    func searchBooks(query: String) async throws -> [Book] {
+        let payload: [String: Any] = ["query": query]
+        // book-search.js's vercel.json maxDuration is 15s — 20s headroom,
+        // same margin as why-liked-it.js since neither involves a Claude call.
+        let request = try makeRequest(path: "book-search", body: payload, timeout: 20)
+        let data = try await send(request, endpoint: "book-search")
+        do {
+            return try JSONDecoder().decode(BookSearchResponse.self, from: data).results
+        } catch {
+            print("[RecommendationEngine] book-search decode failed: \(error) — raw: \(String(data: data, encoding: .utf8) ?? "<non-utf8>")")
+            throw error
+        }
+    }
+
     func generateWhyYouLikedIt(for entry: LibraryEntry) async throws -> String {
         // why-liked-it.js's vercel.json maxDuration is 15s — 20s headroom.
         let request = try makeRequest(path: "why-liked-it", body: [
@@ -202,6 +259,14 @@ struct VibeSearchResult {
 
 private struct RecommendationResponse: Codable {
     let rows: [RecommendationRow]
+}
+
+private struct DailyPicksResponse: Codable {
+    let picks: [Recommendation]
+}
+
+private struct BookSearchResponse: Codable {
+    let results: [Book]
 }
 
 private struct VibeSearchResponse: Codable {

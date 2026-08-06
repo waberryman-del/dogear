@@ -11,11 +11,13 @@
 		11D82512F84BEF5AB3255AF9 /* MyShelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CDD781F4982ECA991B971D3 /* MyShelfView.swift */; };
 		12AFF6743E64F9705DD728C3 /* RecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A9F16DD3CD8D378DC9171F3 /* RecommendationEngine.swift */; };
 		1662CDEAE4E315CAED701BDF /* HeroReadingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D644A147FCC71CC5607C8660 /* HeroReadingCard.swift */; };
+		FF00F9F6045A471F8634558E /* DailyPickCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C8D8F6448EE40BFA597CF80 /* DailyPickCard.swift */; };
 		1BA3B9778421AC55C039B087 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50BF150706FFE909DAB55 /* Motion.swift */; };
 		D13A769E327647058F564B89 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26A0A3F1810548BA819DA260 /* Haptics.swift */; };
 		2922FB03A48C45097C9A4DA1 /* RecommendationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D13E0C4958AB37EB52984106 /* RecommendationCard.swift */; };
 		38A62EFB30E62C717A02B6CE /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388C1C21E294ED14AA91D0F1 /* AppRootView.swift */; };
 		3E5267540396AB4614DC2C3F /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E2C7C1C2BF4B577E773EFB /* TodayView.swift */; };
+		872E8C64026E4081812173F8 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 426818A945944989AE941C3F /* SearchView.swift */; };
 		407E6592C9286CBAD23CEF2B /* DogearChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AA3C2B3FCF9D998576CAF09 /* DogearChip.swift */; };
 		43800295D5E0B300DA3500C8 /* VibeSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B081C5766302DCB70740F14 /* VibeSearchView.swift */; };
 		487FFA5B5A3A396C7B07F04B /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B2F53441F920C23DB3E64A8 /* RootTabView.swift */; };
@@ -37,6 +39,7 @@
 		E1CC8ED3BDEC5EBF40F22F7D /* DogearApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBA93B138CDB691769D27D95 /* DogearApp.swift */; };
 		F2D9B3F7964F3E3ABAC6A4B6 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = F647FD8AA8FB7BF21F6B4E47 /* Typography.swift */; };
 		FFE1209072A046D943853A12 /* OtherViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C773F1E1E925E5A15625A1FA /* OtherViews.swift */; };
+		119662F84411429EA3CC5A78 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB74ADF87E4451B8FF6D512 /* ProfileView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +47,7 @@
 		1B46B8408922363F8F3ED528 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		1D4CE24CB190703A2597D2EE /* BookCoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCoverView.swift; sourceTree = "<group>"; };
 		21E2C7C1C2BF4B577E773EFB /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		426818A945944989AE941C3F /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		2497FF2C26F550143C1F1F38 /* Color+Dogear.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Dogear.swift"; sourceTree = "<group>"; };
 		2B081C5766302DCB70740F14 /* VibeSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VibeSearchView.swift; sourceTree = "<group>"; };
 		2CDD781F4982ECA991B971D3 /* MyShelfView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyShelfView.swift; sourceTree = "<group>"; };
@@ -63,10 +67,12 @@
 		26A0A3F1810548BA819DA260 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		C28169EC0586B53F9F89B2E7 /* Book.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
 		C773F1E1E925E5A15625A1FA /* OtherViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherViews.swift; sourceTree = "<group>"; };
+		6BB74ADF87E4451B8FF6D512 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		CF13DB9134922F21AE8E6542 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
 		D13E0C4958AB37EB52984106 /* RecommendationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationCard.swift; sourceTree = "<group>"; };
 		D368EFF48A6CEAB5DF0A7252 /* LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryStore.swift; sourceTree = "<group>"; };
 		D644A147FCC71CC5607C8660 /* HeroReadingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroReadingCard.swift; sourceTree = "<group>"; };
+		5C8D8F6448EE40BFA597CF80 /* DailyPickCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyPickCard.swift; sourceTree = "<group>"; };
 		DA778A5AF4BFC532B3CBA34A /* BookDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailView.swift; sourceTree = "<group>"; };
 		E16F6AC22B60693A1A58E39A /* Radius.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Radius.swift; sourceTree = "<group>"; };
 		ECDE17B4346A1DF9B84CE8CF /* Spacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Spacing.swift; sourceTree = "<group>"; };
@@ -133,6 +139,7 @@
 				A4B2B8ADE8BAB132AEE6AB8A /* DogearButton.swift */,
 				3AA3C2B3FCF9D998576CAF09 /* DogearChip.swift */,
 				D644A147FCC71CC5607C8660 /* HeroReadingCard.swift */,
+				5C8D8F6448EE40BFA597CF80 /* DailyPickCard.swift */,
 				9B22962813AF30BE67878732 /* ReadingProgressSheet.swift */,
 				AE00C107C2C38F6FEE7C1E59 /* RecommendationGrid.swift */,
 				AAC7FFAC87AA1DCC75863205 /* RecommendationRowView.swift */,
@@ -152,9 +159,11 @@
 				2CDD781F4982ECA991B971D3 /* MyShelfView.swift */,
 				870E944D70CCC3F2D62DD3A9 /* OnboardingView.swift */,
 				C773F1E1E925E5A15625A1FA /* OtherViews.swift */,
+				6BB74ADF87E4451B8FF6D512 /* ProfileView.swift */,
 				D13E0C4958AB37EB52984106 /* RecommendationCard.swift */,
 				9B2F53441F920C23DB3E64A8 /* RootTabView.swift */,
 				21E2C7C1C2BF4B577E773EFB /* TodayView.swift */,
+				426818A945944989AE941C3F /* SearchView.swift */,
 				2B081C5766302DCB70740F14 /* VibeSearchView.swift */,
 			);
 			path = Views;
@@ -264,12 +273,14 @@
 				6BE93F21AD3CAAAAD641295C /* DogearButton.swift in Sources */,
 				407E6592C9286CBAD23CEF2B /* DogearChip.swift in Sources */,
 				1662CDEAE4E315CAED701BDF /* HeroReadingCard.swift in Sources */,
+				FF00F9F6045A471F8634558E /* DailyPickCard.swift in Sources */,
 				72F4086F52113856D4DA9D33 /* LibraryStore.swift in Sources */,
 				1BA3B9778421AC55C039B087 /* Motion.swift in Sources */,
 				D13A769E327647058F564B89 /* Haptics.swift in Sources */,
 				11D82512F84BEF5AB3255AF9 /* MyShelfView.swift in Sources */,
 				58AF95D724B9D74D65C38A11 /* OnboardingView.swift in Sources */,
 				FFE1209072A046D943853A12 /* OtherViews.swift in Sources */,
+				119662F84411429EA3CC5A78 /* ProfileView.swift in Sources */,
 				08B6C2B359DA511F8B6CF3C1 /* Radius.swift in Sources */,
 				DC163FF1CF376628C2DCC93C /* ReadingProgressSheet.swift in Sources */,
 				2922FB03A48C45097C9A4DA1 /* RecommendationCard.swift in Sources */,
@@ -281,6 +292,7 @@
 				9F3E51CE439393E43F6F3524 /* StartReadingSheet.swift in Sources */,
 				C6AF9E2B67FB556AB0F7305F /* StateViews.swift in Sources */,
 				3E5267540396AB4614DC2C3F /* TodayView.swift in Sources */,
+				872E8C64026E4081812173F8 /* SearchView.swift in Sources */,
 				F2D9B3F7964F3E3ABAC6A4B6 /* Typography.swift in Sources */,
 				913D56AC3CA5AF99C819EA7E /* VibePromptField.swift in Sources */,
 				43800295D5E0B300DA3500C8 /* VibeSearchView.swift in Sources */,

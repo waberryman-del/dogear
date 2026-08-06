@@ -219,6 +219,16 @@ final class LibraryStore: ObservableObject {
         )
     }
 
+    // MARK: - Search (decision #25, part 1 — real metadata search)
+
+    /// No AI reasoning, no exclusion filtering — a direct catalog lookup, so
+    /// unlike `vibeSearch`/`nextPicks`/`dailyPicks` this doesn't touch
+    /// `shownBooks` at all. Finding a book via search and looking at it
+    /// isn't "being shown a recommendation."
+    func searchBooks(query: String) async throws -> [Book] {
+        try await recEngine.searchBooks(query: query)
+    }
+
     // MARK: - Today's daily picks (decision #24, #26, #27)
 
     var allTodaysPicksDecided: Bool {
@@ -346,7 +356,8 @@ final class LibraryStore: ObservableObject {
                 let rows = try await self.recEngine.nextPicks(
                     basedOn: self.entries,
                     onboardingGenres: self.onboardingGenres,
-                    shownBooks: self.shownBooks
+                    shownBooks: self.shownBooks,
+                    notInterestedBooks: self.notInterestedBooks
                 )
                 let filtered = self.filterAlreadyShown(rows)
                 withAnimation(DogearMotion.standard) {

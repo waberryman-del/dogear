@@ -35,12 +35,5 @@ struct VaultView: View {
     }
 }
 
-struct ProfileView: View {
-    var body: some View {
-        NavigationStack {
-            Text("Reading DNA visualization goes here")
-                .foregroundStyle(.secondary)
-                .navigationTitle("Profile")
-        }
-    }
-}
+// ProfileView moved to its own file (decision #28 — real minimal content,
+// not this placeholder) — see ProfileView.swift.
