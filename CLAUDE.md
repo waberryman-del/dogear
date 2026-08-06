@@ -281,4 +281,5 @@ Optimize for a working app on a real device, not architectural purity.
 When in doubt between "more features" and "polish what exists," polish.
 Every AI-generated string must degrade gracefully — clear retry state, never a
 blank screen or crash.
-Keep backend/ and ios/ as separate concerns.
+- Keep `backend/` and `ios/` as separate concerns; the iOS app should only ever know
+  about its Vercel endpoint URLs, nothing about Anthropic or Google Books directly.
