@@ -58,15 +58,13 @@ struct LibraryEntry: Identifiable, Codable, Equatable {
 }
 
 /// Target page + target date, set and edited from the Today hero card
-/// (decision #18). The pace indicator (on track / behind) is computed from
-/// this plus `LibraryEntry.currentPage` and `dateStartedReading` — not stored,
-/// since it changes with every day that passes even if nothing else does.
+/// (decision #18).
 struct ReadingGoal: Codable, Equatable {
     var targetPage: Int
     var targetDate: Date
 }
 
-/// Shared progress/pace math — originally private to `HeroReadingCard`,
+/// Shared progress math — originally private to `HeroReadingCard`,
 /// pulled out here once the post-decision full-bleed hero (design brief,
 /// decision #24 follow-up) needed the exact same calculations.
 extension LibraryEntry {
@@ -77,32 +75,23 @@ extension LibraryEntry {
         return min(Double(currentPage) / Double(denominator), 1.0)
     }
 
-    /// "On track" / "Behind pace" from current page vs. where the goal's
-    /// timeline implies the reader should be today (decision #18). Needs a
-    /// goal, a logged page, and a start date to compare against — nil
-    /// otherwise rather than guessing.
-    var paceStatus: String? {
-        guard let goal = readingGoal,
-              let currentPage,
-              let startDate = dateStartedReading else { return nil }
-        let totalDays = max(goal.targetDate.timeIntervalSince(startDate) / 86400, 1)
-        let elapsedDays = min(max(Date.now.timeIntervalSince(startDate) / 86400, 0), totalDays)
-        let expectedPage = (elapsedDays / totalDays) * Double(goal.targetPage)
-        return Double(currentPage) >= expectedPage ? "On track" : "Behind pace"
-    }
-
+    /// Calm, factual stats only — pages remaining and how long the reader's
+    /// been on this book. No pace/timeline judgment ("on track" / "behind"
+    /// against the goal's schedule) — this app doesn't comment on reading
+    /// speed. The "Started N days ago" clause only appears alongside a goal;
+    /// without one, pages remaining (or read so far) stands alone.
     var pageStatusText: String? {
         guard let currentPage else { return nil }
-        var parts: [String] = []
-        if let total = readingGoal?.targetPage ?? book.pageCount {
-            parts.append("Page \(currentPage) of \(total)")
+        let pagesPart: String
+        if let total = readingGoal?.targetPage ?? book.pageCount, total > currentPage {
+            pagesPart = "\(total - currentPage) pages left"
         } else {
-            parts.append("Page \(currentPage)")
+            pagesPart = "\(currentPage) pages read so far"
         }
-        if let pace = paceStatus {
-            parts.append(pace)
-        }
-        return parts.joined(separator: " · ")
+        guard readingGoal != nil, let startDate = dateStartedReading else { return pagesPart }
+        let days = max(Int(Date.now.timeIntervalSince(startDate) / 86400), 0)
+        let startedPart = days == 0 ? "Started today" : "Started \(days) day\(days == 1 ? "" : "s") ago"
+        return "\(pagesPart) · \(startedPart)"
     }
 }
 
