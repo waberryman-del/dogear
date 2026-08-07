@@ -44,27 +44,30 @@ This is the actual plan going forward. If any future session (Claude Code or oth
 proposes jumping ahead to a later phase before the current one is genuinely done, or
 silently reordering these, stop and flag it explicitly instead of just doing it.
 
-[Launch Roadmap Stage 0 — closed with a caveat, not fully closed yet] Per
-`LAUNCH-ROADMAP.md`, Stage 0 ("Stabilize — no new features, no new screens")
-has 4 items. 3 are confirmed, not just assumed: persistence was fixed and
-proven on a real device (add a book, set a goal, force-quit, reopen —
+[Launch Roadmap Stage 0 — CLOSED, no open caveats] Per `LAUNCH-ROADMAP.md`,
+Stage 0 ("Stabilize — no new features, no new screens") is fully done, all
+4 items confirmed with real evidence, not assumed: persistence was fixed
+and proven on a real device (add a book, set a goal, force-quit, reopen —
 everything survives, see Persistence above); Today's post-decision hero
-moment was rebuilt on the proven compact card and refined (no pace/pressure
-language, calm factual stats line); and recommend.js/vibe-search.js were
-both confirmed holding up under a real, heavy-exclusion load (~60-book
-shown_books list) with actual evidence — not "should be fine now" —
-including a fix (recommend.js's max_tokens and retry count) that was
-re-tested clean afterward. The 4th item — confirm the midpoint check-in
-(decision #5) actually exists — is NOT done: only the date-tracking data
-model exists (`LibraryEntry.midpointCheckIn`, set in `startReading()`); no
-`UNUserNotificationCenter` scheduling exists anywhere in the codebase, and
-`LibraryStore.answerMidpointCheckIn()` is never called from any view. This
-is a real, known gap, not a surprise to discover later — exactly what the
-roadmap's own item 4 warned about. Building it (local notification
-scheduling + wiring `answerMidpointCheckIn` to a real UI prompt) is the
-next task, right after this. Once that's done, Stage 0 is genuinely, fully
-closed — until then, treat it as closed-with-caveat, not done. Stage 1
-(book detail page) should not start before that.
+moment was rebuilt on the proven compact card and refined through several
+real rounds of feedback (no pace/pressure language, time-aware greeting
+redesign); recommend.js/vibe-search.js were confirmed holding up under a
+real, heavy-exclusion load (~60-book shown_books list) — including a fix
+(recommend.js's max_tokens and retry count) that was re-tested clean
+afterward; and the midpoint check-in (decision #5) — previously just a
+data field, `answerMidpointCheckIn()` dead code, no notification anywhere
+in the codebase — is now built for real: `UNUserNotificationCenter`
+scheduling on `startReading()`, permission requested in-context (not on
+cold launch), a real yes/no UI prompt on Today that surfaces the same way
+whether the reader taps the notification or just opens the app normally
+after the date passes, and the answer verified reaching
+recommend.js/vibe-search.js as `still_enjoying_midpoint` in the actual
+request payload. See `LAUNCH-ROADMAP.md` for the full, current status of
+every stage. Stage 1 (book detail page) is next, but per that roadmap's
+own instruction, it does not start until a dedicated planning conversation
+happens first — the same treatment the design system and Vibe Search specs
+got. Being unblocked to plan Stage 1 is not the same as being unblocked to
+build it.
 
 Phase 1 — done. Onboarding (genre picks), Today screen with real AI
 recommendations, tap-to-detail, add to shelf, a basic My Shelf screen, real cover

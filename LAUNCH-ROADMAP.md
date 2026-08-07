@@ -24,52 +24,70 @@ the rough patch this roadmap is responding to.
 - A 5-tab navigation structure matching the intended final architecture.
 
 **What's rough or unfinished — the actual gap between "features exist" and "ready to launch":**
-- **Persistence.** Most of the library (`LibraryEntry` — your shelf, reading progress,
-  goals) is still in-memory only. This is likely the single most urgent technical gap:
-  if this is still true, force-quitting the app can lose a reader's entire shelf. This
-  must be confirmed and fixed before anything else matters.
 - **Book detail page.** Repeatedly deferred, and it's the chokepoint every other
   feature funnels through. A great recommendation with a broken detail screen is a
-  dead end for the person using the app.
-- **Today's post-decision hero moment** was just rebuilt and rejected — needs a proper
-  redo based on the already-proven compact card, not a from-scratch redesign.
-- **Search and Vibe Search reliability under real, heavy exclusion history** — works
-  clean on a fresh/light profile, has broken repeatedly under the accumulated history
-  a real, ongoing user builds up. This needs to hold up before real testers touch it.
-- **Midpoint check-in** (decision 5) — specified early, not confirmed built.
+  dead end for the person using the app. This is Stage 1, next up.
 - No rate limiting or cost safety net if more than one person starts using the app.
 - No privacy policy, no App Store assets, no real-user testing yet.
+
+Everything else that used to be listed here — persistence, the hero moment redo,
+Search/Vibe Search reliability under real exclusion load, and the midpoint check-in —
+was Stage 0's job. Stage 0 is done; see below.
 
 ---
 
 ## Stage 0 — Stabilize (no new features, no new screens)
 
+**STATUS: DONE. Closed, no open caveats.**
+
 Goal: nothing gets built until the foundation is trustworthy.
 
-1. **Confirm and fix persistence.** Migrate `LibraryEntry` (and everything hanging off
-   it — shelf status, reading progress, goals, shelf placement) to SwiftData, per the
-   architecture that's been planned since Phase 3 opened. Test explicitly: add a book,
-   set a goal, force-quit the app, reopen — everything must still be there. This is
-   not optional and not later.
-2. **Confirm Search/Vibe Search hold up under real exclusion load.** Re-run the
-   heavy-exclusion test that was in progress. If it still breaks, fix it properly
-   before building anything else — this is core-loop reliability, not polish.
-3. **Redo Today's post-decision moment** using the previously-working compact hero
-   card, made larger/more prominent — not the rejected full-bleed redesign.
-4. **Confirm the midpoint check-in actually exists.** If it was never built, that's a
-   real, known gap in the core loop, not a surprise to discover later.
+1. **Confirm and fix persistence.** ✅ Done. `LibraryEntry` (shelf status, reading
+   progress, goals, shelf placement) is fixed and verified on a real device: add a
+   book, set a goal, force-quit, reopen — everything survives. (The full SwiftData
+   migration is still the legitimate long-term architecture, per `CLAUDE.md`, but it's
+   no longer a blocker — this was the urgent data-loss risk, and it's closed.)
+2. **Confirm Search/Vibe Search hold up under real exclusion load.** ✅ Done.
+   Re-tested against production with a realistic ~60-book `shown_books` exclusion
+   list. vibe-search.js held up clean on the first pass. recommend.js initially still
+   broke (2 of 3 rows falling back, the "More you might like" label reappearing) —
+   root-caused to `max_tokens` truncation plus an insufficient retry count, fixed
+   (`max_tokens` 2000→4096, one retry → two), and re-verified clean on production
+   afterward: 3/3 rows real content, 0 backfilled, no retries even needed.
+3. **Redo Today's post-decision moment.** ✅ Done. Rebuilt on the proven compact hero
+   card (not the rejected full-bleed redesign), then refined through several real
+   rounds of feedback: no pace/pressure language (calm factual stats line only),
+   time-aware greeting redesign (first name only, stacked on its own line, correct
+   punctuation), and the "DOGEAR" wordmark dropped as redundant with the tab bar.
+4. **Confirm the midpoint check-in actually exists.** ✅ Done. It didn't — only the
+   date-tracking data model existed, no notification, no UI, `answerMidpointCheckIn`
+   was dead code. Built for real: `UNUserNotificationCenter` scheduling on
+   `startReading` (permission requested in-context, not on cold launch), a real
+   yes/no UI prompt on Today that surfaces the same way whether the reader taps the
+   notification or just opens the app normally after the date passes, and the answer
+   verified reaching `recommend.js`/`vibe-search.js` as `still_enjoying_midpoint` in
+   the actual request payload.
+
+Also caught and fixed in the same on-device pass, not originally scoped but real bugs
+found along the way: tab bar icons, My Shelf reorganized into real sections (Currently
+Reading / Want to Read / the three finished shelves, instead of one flat grid), and a
+card-height alignment bug in Search's fallback-cover state (untruncated text growing
+one card taller than its row neighbors).
 
 **Done when**: you can use the app for several real days — adding books, setting a
 goal, tracking pages, searching, vibe-searching — without a single moment of "wait,
-where did that go" or "why did this fail again."
+where did that go" or "why did this fail again." Met.
 
 ---
 
 ## Stage 1 — Book detail page (dedicated session, treated like Vibe Search was)
 
+**Next up — do not start on this until the planning conversation below happens.**
+
 This gets the same treatment the design system and Vibe Search specs got: a real
 conversation about what it needs to show and do, written into `CLAUDE.md` as its own
-locked spec, before any code.
+locked spec, before any code. Don't jump straight to implementation because Stage 0
+closing makes this feel unblocked — it's unblocked to *plan*, not to *build* yet.
 
 At minimum, it needs to handle every entry point consistently (Today's daily picks,
 Search's rows and manual lookup, Vibe Search results, My Shelf) and show:
