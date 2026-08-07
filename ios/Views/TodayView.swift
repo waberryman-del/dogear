@@ -20,6 +20,7 @@ import SwiftUI
 struct TodayView: View {
     @EnvironmentObject var library: LibraryStore
     @State private var selectedRecommendation: Recommendation?
+    @State private var selectedShelfEntry: LibraryEntry?
 
     var body: some View {
         NavigationStack {
@@ -34,6 +35,7 @@ struct TodayView: View {
                     // either way.
                     if library.allTodaysPicksDecided {
                         HeroReadingCard(isProminent: true)
+                        upNextSection
                     } else {
                         HeroReadingCard()
                         dailyPicksSection
@@ -47,6 +49,58 @@ struct TodayView: View {
             .sheet(item: $selectedRecommendation) { rec in
                 BookDetailView(book: rec.book, reason: rec.reason)
                     .environmentObject(library)
+            }
+            .sheet(item: $selectedShelfEntry) { entry in
+                BookDetailView(book: entry.book)
+                    .environmentObject(library)
+            }
+        }
+    }
+
+    /// Fills the space below the prominent hero once today's picks are all
+    /// decided (decision #26/#27's daily-picks section clears then, and the
+    /// old full-bleed redesign left that space empty) with a peek at what's
+    /// already queued up — existing want-to-read entries, no new data or
+    /// engine call. Reuses the same cover/title/author card language as
+    /// `MyShelfView`'s shelf grid and `RecommendationRowView`'s cards; never
+    /// truly blank, even with nothing queued.
+    @ViewBuilder
+    private var upNextSection: some View {
+        let wantToRead = library.entries.filter { $0.status == .wantToRead }
+        VStack(alignment: .leading, spacing: DogearSpacing.space3) {
+            Text("UP NEXT")
+                .font(DogearType.caption).tracking(1.5)
+                .foregroundStyle(DogearColor.brass)
+                .padding(.horizontal, DogearSpacing.space5)
+            if wantToRead.isEmpty {
+                Text("Your next 3 picks arrive tomorrow.")
+                    .font(DogearType.bodySmall)
+                    .foregroundStyle(DogearColor.mutedInk)
+                    .padding(.horizontal, DogearSpacing.space5)
+            } else {
+                HStack(spacing: DogearSpacing.space4) {
+                    ForEach(wantToRead.prefix(3)) { entry in
+                        Button {
+                            selectedShelfEntry = entry
+                        } label: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                BookCoverView(url: entry.book.coverURL, title: entry.book.title, width: 88, height: 128)
+                                Text(entry.book.title)
+                                    .font(.caption.bold())
+                                    .foregroundStyle(DogearColor.ink)
+                                    .lineLimit(1)
+                                Text(entry.book.author)
+                                    .font(.caption2)
+                                    .foregroundStyle(DogearColor.mutedInk)
+                                    .lineLimit(1)
+                            }
+                            .frame(width: 88)
+                        }
+                        .buttonStyle(DogearPressStyle())
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, DogearSpacing.space5)
             }
         }
     }

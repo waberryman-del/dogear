@@ -101,17 +101,22 @@ struct HeroReadingCard: View {
         }
         .buttonStyle(DogearPressStyle())
         .overlay(alignment: .topTrailing) {
+            // At the prominent scale the old fixed size/offset (tuned for the
+            // small card) read as an oversized button floating away from the
+            // corner. Smaller and more muted here, tucked into the true
+            // corner using the card's own (larger) padding rather than a
+            // fixed inset — same tap target, just quieter.
             Button {
                 showSwitchOptions = true
             } label: {
                 Image(systemName: "ellipsis.circle.fill")
-                    .font(.system(size: isProminent ? 24 : 20))
-                    .foregroundStyle(DogearColor.mutedInk)
+                    .font(.system(size: isProminent ? 17 : 20))
+                    .foregroundStyle(DogearColor.mutedInk.opacity(isProminent ? 0.55 : 1))
                     .padding(DogearSpacing.space2)
             }
             .buttonStyle(DogearPressStyle())
-            .padding(.trailing, DogearSpacing.space5 + DogearSpacing.space2)
-            .padding(.top, DogearSpacing.space2)
+            .padding(.trailing, isProminent ? DogearSpacing.space4 : DogearSpacing.space5 + DogearSpacing.space2)
+            .padding(.top, isProminent ? DogearSpacing.space4 : DogearSpacing.space2)
         }
         .padding(.horizontal, DogearSpacing.space5)
     }
