@@ -73,10 +73,25 @@ struct TodayView: View {
                 .foregroundStyle(DogearColor.brass)
                 .padding(.horizontal, DogearSpacing.space5)
             if wantToRead.isEmpty {
-                Text("Your next 3 picks arrive tomorrow.")
-                    .font(DogearType.bodySmall)
-                    .foregroundStyle(DogearColor.mutedInk)
-                    .padding(.horizontal, DogearSpacing.space5)
+                // Nothing queued and today's picks are already spoken for —
+                // send the reader to Search (its AI-personalized rows are
+                // the general "find something to add" surface; Vibe Search
+                // is for a specific mood query, a narrower ask than this
+                // empty state calls for) rather than leaving flat text.
+                VStack(alignment: .leading, spacing: DogearSpacing.space2) {
+                    Text("Nothing queued up yet.")
+                        .font(DogearType.bodySmall)
+                        .foregroundStyle(DogearColor.mutedInk)
+                    Button {
+                        library.selectedTab = .search
+                    } label: {
+                        Text("Browse Search for something to read →")
+                            .font(DogearType.bodySmall.weight(.semibold))
+                            .foregroundStyle(DogearColor.forest)
+                    }
+                    .buttonStyle(DogearPressStyle())
+                }
+                .padding(.horizontal, DogearSpacing.space5)
             } else {
                 HStack(spacing: DogearSpacing.space4) {
                     ForEach(wantToRead.prefix(3)) { entry in

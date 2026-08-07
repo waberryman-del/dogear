@@ -78,6 +78,18 @@ struct HeroReadingCard: View {
                         Text(entry.book.author)
                             .font(isProminent ? DogearType.body : DogearType.bodySmall)
                             .foregroundStyle(DogearColor.mutedInk)
+                        // Prominent-only: a reminder of what the book is
+                        // actually about, for a reader who hasn't picked it
+                        // up in a few days — not decorative, so it only
+                        // earns its place at the size where there's real
+                        // room to read it.
+                        if isProminent {
+                            Text(synopsisSnippet(for: entry.book))
+                                .font(DogearType.bodySmall)
+                                .foregroundStyle(DogearColor.mutedInk)
+                                .lineLimit(2)
+                                .padding(.top, 2)
+                        }
                         if let statusText = entry.pageStatusText {
                             Text(statusText)
                                 .font(isProminent ? DogearType.bodySmall : DogearType.caption)
@@ -138,6 +150,16 @@ struct HeroReadingCard: View {
         .background(DogearColor.linen)
         .clipShape(RoundedRectangle(cornerRadius: DogearRadius.card))
         .padding(.horizontal, DogearSpacing.space5)
+    }
+
+    /// `book.summary` is a known gap for some Google Books/Open Library
+    /// entries (CLAUDE.md's book-metadata fallback pattern) — degrade
+    /// gracefully rather than leaving blank space under the author line.
+    private func synopsisSnippet(for book: Book) -> String {
+        guard let summary = book.summary, !summary.isEmpty else {
+            return "No synopsis available for this edition."
+        }
+        return summary
     }
 
     private func progressBar(fraction: Double) -> some View {

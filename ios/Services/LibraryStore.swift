@@ -5,6 +5,10 @@ import SwiftUI
 @MainActor
 final class LibraryStore: ObservableObject {
     @Published var entries: [LibraryEntry] = []
+    /// Lets a screen (e.g. Today's empty "Up Next" CTA) send the reader to
+    /// another tab without a second navigation system — transient UI state,
+    /// not shelf data, so deliberately not persisted like `entries` above.
+    @Published var selectedTab: RootTab = .today
     @Published var recommendationRows: [RecommendationRow] = []
     @Published var isRefreshingRecs = false
     @Published var recommendationsLoadFailed = false
