@@ -173,7 +173,11 @@ struct TodayView: View {
     // size, and it avoids an ever-lengthening single line as names vary.
     private var header: some View {
         VStack(alignment: .leading, spacing: DogearSpacing.space1) {
-            Text(timeOfDayGreeting)
+            // Comma only when a name follows on the line below — "Good
+            // evening," reads as a continuing address; "Good evening" alone
+            // (no name set) is a complete phrase and shouldn't dangle a
+            // trailing comma with nothing after it.
+            Text(firstName.isEmpty ? timeOfDayGreeting : "\(timeOfDayGreeting),")
                 .font(DogearType.displayLItalic)
                 .foregroundStyle(DogearColor.ink)
             if !firstName.isEmpty {
