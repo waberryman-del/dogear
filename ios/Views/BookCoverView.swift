@@ -48,6 +48,13 @@ struct BookCoverView: View {
             )
     }
 
+    /// CONFIRMED root cause of a real layout bug: an untruncated title here
+    /// (e.g. a long box-set bundle name) could grow this view taller than
+    /// the cover frame it's meant to fill, breaking row alignment against
+    /// neighboring cards whose covers loaded normally. `lineLimit` plus an
+    /// explicit `frame` (belt-and-suspenders alongside the fixed frame
+    /// already set on the shape this overlays) guarantee this never renders
+    /// larger than any other cover in the same row, loaded or not.
     private var fallback: some View {
         ZStack(alignment: .topTrailing) {
             DogearColor.linen
@@ -56,6 +63,7 @@ struct BookCoverView: View {
                 Text(title)
                     .font(.system(size: 11, weight: .semibold, design: .serif))
                     .foregroundStyle(DogearColor.ink)
+                    .lineLimit(3)
                 if let author {
                     Text(author)
                         .font(.system(size: 9, weight: .regular))
@@ -68,6 +76,8 @@ struct BookCoverView: View {
 
             staticFoldedCorner
         }
+        .frame(width: width, height: height)
+        .clipped()
     }
 
     private var staticFoldedCorner: some View {
