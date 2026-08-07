@@ -14,6 +14,11 @@ enum DogearType {
     /// Reserved for greetings, atmosphere, short reflective statements only.
     static var titleItalic: Font { title.italic() }
 
+    /// Decision #29: Today's greeting, having lost the "DOGEAR" wordmark
+    /// above it, needed more visual weight to still read as the screen's
+    /// anchor — bumped up from `titleItalic` (24pt) to `displayL` (32pt).
+    static var displayLItalic: Font { displayL.italic() }
+
     /// Not in Design System 0.1 — added for Phase 3's recommendation row
     /// labels ("Because you loved Beloved"), which are short reflective
     /// statements per Section 04's italic-serif rule but repeat several times

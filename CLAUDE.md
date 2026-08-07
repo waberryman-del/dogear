@@ -252,6 +252,27 @@ Search's rows.
 Profile tab scope, for now: basic reading stats (books finished,
 current streak or similar) plus app settings. Real content, not a
 placeholder, but intentionally minimal.
+29. **Today's header**: no "DOGEAR" wordmark needed at the top — just the
+    time-aware greeting ("Good morning" / "Good afternoon" / "Good
+    evening"), optionally followed by the reader's first name if set, in a
+    larger, more prominent type size than currently shown. Name source for
+    now: a simple optional "Your name" field in Profile settings (plain
+    text, no validation needed) — if blank, greeting has no name, just the
+    time-of-day phrase. **Forward note, not to act on now**: once real
+    accounts/login exist (a future phase, explicitly not v1 — see "What NOT
+    to build in v1"), this manual field should be replaced by the real
+    account name. Record this intent so it isn't lost, don't build login now.
+30. **My Shelf reorganization**: no longer a flat grid of everything. Real
+    sections, in order: **Currently Reading** (a real list — can be more
+    than one book; this is separate from the hero card's single-book
+    spotlight on Today, which shows only the most recent — both are valid,
+    different views of the same underlying data, not a conflict), **Want to
+    Read** (the same list Today's "Up Next" already previews under the hero
+    card — one underlying data source, two places it's shown), then the
+    three finished-book shelves per decision #3: **Keep Forever**, **Glad I
+    Read It**, **Should've Stopped**. This finally gives want-to-read/
+    currently-reading books — which don't have a `shelfPlacement` and never
+    belonged in the three finished shelves — an honest home.
 Design identity
 Palette: unchanged from the earlier prototype and still the right call — deep
 forest 

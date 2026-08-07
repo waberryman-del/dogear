@@ -154,24 +154,28 @@ struct TodayView: View {
     // Decision #12/#24: the old "My shelf" header link was a workaround from
     // when Shelf wasn't a real tab. It is now (RootTabView), so this link
     // was just a redundant second path to the same destination — removed.
+    // Decision #29: the "DOGEAR" wordmark above the greeting is gone — the
+    // tab bar already establishes app identity, so it was redundant here.
+    // The greeting alone carries more visual weight now (`displayLItalic`)
+    // to still read as the screen's anchor.
     private var header: some View {
-        VStack(alignment: .leading, spacing: DogearSpacing.space1) {
-            Text("DOGEAR")
-                .font(DogearType.caption).tracking(2)
-                .foregroundStyle(DogearColor.brass)
-            Text(greeting)
-                .font(DogearType.titleItalic)
-                .foregroundStyle(DogearColor.ink)
-        }
-        .padding(.horizontal, DogearSpacing.space5)
+        Text(greeting)
+            .font(DogearType.displayLItalic)
+            .foregroundStyle(DogearColor.ink)
+            .padding(.horizontal, DogearSpacing.space5)
     }
 
-    /// Morning/afternoon/evening based on the device clock, not a fixed string.
+    /// Morning/afternoon/evening based on the device clock, plus the
+    /// reader's name if they've set one in Profile (decision #29) — blank
+    /// name means just the time-of-day phrase, no trailing comma/name.
     private var greeting: String {
+        let timeOfDay: String
         switch Calendar.current.component(.hour, from: .now) {
-        case 5..<12: return "Good morning"
-        case 12..<17: return "Good afternoon"
-        default: return "Good evening"
+        case 5..<12: timeOfDay = "Good morning"
+        case 12..<17: timeOfDay = "Good afternoon"
+        default: timeOfDay = "Good evening"
         }
+        let name = library.readerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? timeOfDay : "\(timeOfDay), \(name)"
     }
 }

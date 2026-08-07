@@ -19,6 +19,12 @@ final class LibraryStore: ObservableObject {
     @Published var onboardingGenres: Set<Genre> = []   // set once, during onboarding
     @Published private(set) var hasCompletedOnboarding: Bool
 
+    /// Decision #29: optional first name for Today's greeting, set from
+    /// Profile settings. Plain text, no validation. Stopgap until real
+    /// accounts/login exist (explicitly not v1) — do not build that now,
+    /// this field is meant to be replaced by the account name then.
+    @Published private(set) var readerName: String = ""
+
     /// Every book ever surfaced by either recommend() or vibeSearch(), whether
     /// or not the reader added it — separate from `entries` (see CLAUDE.md
     /// decision #8). Persisted so it survives relaunches, same as onboarding.
@@ -51,6 +57,7 @@ final class LibraryStore: ObservableObject {
     private let entriesKey = "dogear.entries"
     private let hasOnboardedKey = "dogear.hasCompletedOnboarding"
     private let onboardingGenresKey = "dogear.onboardingGenres"
+    private let readerNameKey = "dogear.readerName"
     private let shownBooksKey = "dogear.shownBooks"
     private let recommendationRowsKey = "dogear.recommendationRows"
     private let todaysPicksKey = "dogear.todaysPicks"
@@ -86,6 +93,7 @@ final class LibraryStore: ObservableObject {
         if let saved = defaults.array(forKey: onboardingGenresKey) as? [String] {
             onboardingGenres = Set(saved.compactMap(Genre.init(rawValue:)))
         }
+        readerName = defaults.string(forKey: readerNameKey) ?? ""
         if let data = defaults.data(forKey: shownBooksKey),
            let decoded = try? JSONDecoder().decode([ShownBookRecord].self, from: data) {
             shownBooks = decoded
@@ -125,6 +133,13 @@ final class LibraryStore: ObservableObject {
         defaults.set(true, forKey: hasOnboardedKey)
         hasCompletedOnboarding = true
         await performRefresh(blocking: true)   // seeds the very first shelf from genres alone
+    }
+
+    /// Decision #29: no validation — a blank name just means the greeting
+    /// falls back to the time-of-day phrase alone.
+    func setReaderName(_ name: String) {
+        readerName = name
+        defaults.set(name, forKey: readerNameKey)
     }
 
     // MARK: - Adding + starting books

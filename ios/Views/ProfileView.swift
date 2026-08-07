@@ -67,6 +67,23 @@ struct ProfileView: View {
                 .padding(.horizontal, DogearSpacing.space5)
             VStack(alignment: .leading, spacing: DogearSpacing.space3) {
                 HStack {
+                    Text("Your name")
+                        .font(DogearType.bodySmall)
+                        .foregroundStyle(DogearColor.ink)
+                    Spacer()
+                    // Decision #29: plain text, no validation. Blank means
+                    // Today's greeting falls back to the time-of-day phrase
+                    // alone. Stopgap until real accounts exist — not to be
+                    // confused with a login field.
+                    TextField("Optional", text: readerNameBinding)
+                        .font(DogearType.bodySmall)
+                        .foregroundStyle(DogearColor.mutedInk)
+                        .multilineTextAlignment(.trailing)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                }
+                Divider()
+                HStack {
                     Text("Onboarding genres")
                         .font(DogearType.bodySmall)
                         .foregroundStyle(DogearColor.ink)
@@ -121,6 +138,13 @@ struct ProfileView: View {
             day = previous
         }
         return streak
+    }
+
+    private var readerNameBinding: Binding<String> {
+        Binding(
+            get: { library.readerName },
+            set: { library.setReaderName($0) }
+        )
     }
 
     private var genresSummary: String {
