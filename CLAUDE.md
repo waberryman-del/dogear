@@ -44,6 +44,28 @@ This is the actual plan going forward. If any future session (Claude Code or oth
 proposes jumping ahead to a later phase before the current one is genuinely done, or
 silently reordering these, stop and flag it explicitly instead of just doing it.
 
+[Launch Roadmap Stage 0 — closed with a caveat, not fully closed yet] Per
+`LAUNCH-ROADMAP.md`, Stage 0 ("Stabilize — no new features, no new screens")
+has 4 items. 3 are confirmed, not just assumed: persistence was fixed and
+proven on a real device (add a book, set a goal, force-quit, reopen —
+everything survives, see Persistence above); Today's post-decision hero
+moment was rebuilt on the proven compact card and refined (no pace/pressure
+language, calm factual stats line); and recommend.js/vibe-search.js were
+both confirmed holding up under a real, heavy-exclusion load (~60-book
+shown_books list) with actual evidence — not "should be fine now" —
+including a fix (recommend.js's max_tokens and retry count) that was
+re-tested clean afterward. The 4th item — confirm the midpoint check-in
+(decision #5) actually exists — is NOT done: only the date-tracking data
+model exists (`LibraryEntry.midpointCheckIn`, set in `startReading()`); no
+`UNUserNotificationCenter` scheduling exists anywhere in the codebase, and
+`LibraryStore.answerMidpointCheckIn()` is never called from any view. This
+is a real, known gap, not a surprise to discover later — exactly what the
+roadmap's own item 4 warned about. Building it (local notification
+scheduling + wiring `answerMidpointCheckIn` to a real UI prompt) is the
+next task, right after this. Once that's done, Stage 0 is genuinely, fully
+closed — until then, treat it as closed-with-caveat, not done. Stage 1
+(book detail page) should not start before that.
+
 Phase 1 — done. Onboarding (genre picks), Today screen with real AI
 recommendations, tap-to-detail, add to shelf, a basic My Shelf screen, real cover
 art (Google Books + Open Library fallback, https-only URLs).
@@ -195,6 +217,18 @@ Library fallback) must not let one book's failure take down the whole
 recommendation/vibe-search response — wrap per-book lookups so a single
 failure degrades gracefully. Function timeouts generous enough to cover
 Claude's response time plus metadata lookups with retries.
+[AMENDED — known, accepted risk, not a confirmed problem] recommend.js's
+per-row retry can now take up to 3 sequential Claude attempts (first
+attempt + 2 broadened retries) before falling back to backfill — added
+after real heavy-exclusion testing (~60-book shown_books list) showed one
+retry alone wasn't enough to recover a row that failed twice in a row. A
+worst-case row that genuinely needs all 3 attempts (~15-20s each) could
+approach the 60s Vercel maxDuration for this endpoint. This has not
+happened in testing — every re-test after the fix resolved on the first
+attempt — but it hasn't been ruled out either, since it depends on Claude's
+behavior under conditions not yet reproduced. Watch for it if a real
+reader's shown_books list grows large; don't treat it as fixed until it's
+actually been seen to hold up at that scale.
 (intentionally reserved — no content; renumbering avoided to prevent
 invalidating other decisions' cross-references. If a real decision 22 is
 needed later, insert it here.)
