@@ -176,6 +176,16 @@ the deeper cause of intermittent failures was max_tokens truncation on harder
 rows — fixed (2000→4096 + a second retry). Known, accepted remaining risk: a
 worst-case row needing all 3 attempts could theoretically approach the 60s
 maxDuration — not observed, not ruled out.
+[Pattern to watch for] This has now silently bitten two separate "make the
+AI reasoning better" changes: recommend.js's harder secondary/discovery rows,
+then vibe-search.js's decision #35 reason-binding rewrite (fixed 2200→4096).
+Both times the failure was the same — longer, more specific per-book
+reasoning pushed the response past max_tokens and truncated the JSON — and
+both times it was caught by live testing after the fact, not anticipated.
+Any future prompt change that asks a row/endpoint for longer or more
+specific reasoning (more detail per pick, more books per response, more
+context to weave in) must have its max_tokens budget checked against that
+requirement BEFORE shipping, not discovered by a truncated response later.
 (intentionally skipped — no content, gap preserved to avoid invalidating other
 decisions' cross-references.)
 [Phase 4 reference — do not act on this yet] A finished brand board exists at

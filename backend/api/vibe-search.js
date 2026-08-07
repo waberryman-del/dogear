@@ -63,6 +63,27 @@ already applied on top of their original query, oldest first (e.g. ["slower", "l
 dark"]). Treat each as a real modifier layered onto the original query's intent — combine
 them with the query and with each other, don't discard or replace the original meaning.
 
+Before you commit to your picks, silently work through at least 2-3 honest, different
+readings of the query — especially when it's ambiguous or metaphorical (a comparison to
+music, weather, a memory, a feeling). For example, "something atmospheric and slow like a
+rainy Sunday" could mean quiet domestic literary fiction, a slow-burn gothic mystery, or
+contemplative nature writing — these are genuinely different books, not the same book
+with different marketing copy. Don't collapse to the first, most obvious interpretation
+and stop there. Let your final list reflect that range where the query and the reader's
+taste profile genuinely support it, rather than 5-6 variations on a single reading. Do
+not show this reasoning in your output — think it through, then return only the final
+JSON.
+
+Avoid defaulting to the same handful of "canon" literary-fiction titles every time a query
+invokes an atmospheric, sad, quiet, or literary mood. Books like Beloved, Piranesi,
+Convenience Store Woman, Norwegian Wood, or Housekeeping are real, correct answers to SOME
+queries — but if you notice yourself reaching for one of them, stop and ask whether it's
+actually the best fit for the specific words in THIS query, or just a safe, familiar
+answer to the general mood category. Search wider: older and newer books, other countries
+and languages in translation, other genres entirely (literary fiction doesn't own
+"atmospheric" or "slow"), and less-obvious authors within a genre. An expected pick is
+fine to include once if it's genuinely earned; it should never be the whole list.
+
 Rules:
 - Interpret tone, pacing, mood, and imagery — don't just keyword-match genre words
   that happen to appear in the query.
@@ -81,9 +102,12 @@ Rules:
   book" fallback. 3 is the acceptable floor if shown_books has genuinely exhausted every
   reasonable match for this vibe — reaching for that floor too early instead of broadening
   your interpretation of the vibe is the wrong tradeoff.
-- "reason" must be one sentence, written directly to the reader ("you"), naming the
-  specific connection between their query and this pick. No generic praise ("a
-  wonderful read").
+- "reason" must be one sentence, written directly to the reader ("you"), and must engage
+  with specific words or images from THEIR query — not just restate the general mood
+  category you filed it under — plus something specific from their taste profile when one
+  exists. E.g. for "like a rainy Sunday," the reason should engage with that image or the
+  quiet/pace it implies, not just assert "this is atmospheric and slow." No generic praise
+  ("a wonderful read").
 - confidence is your own calibrated 0.0-1.0 estimate of fit, used only for sort order —
   never shown to the user verbatim, so don't hedge it, just be honest.
 - After picking the books, propose 2-3 short one-tap refinement labels (2-4 words each,
@@ -144,7 +168,14 @@ function extractJSON(raw) {
 async function generateResults(userContent, systemPrompt) {
   const msg = await anthropic.messages.create({
     model: "claude-sonnet-5",
-    max_tokens: 2200,
+    // Was 2200. CONFIRMED root cause (reproduced live while testing the
+    // decision #35 prompt rewrite): the new "reason" rule requires each
+    // book's reason to engage with specific query words/images AND the
+    // taste profile, which makes every reason noticeably longer than
+    // before — at 6 books that repeatedly blew past 2200 and got cut off
+    // mid-JSON (stop_reason: max_tokens), same failure mode recommend.js
+    // already hit and fixed (2000 -> 4096). Matching that value here.
+    max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: "user", content: userContent }],
   });
