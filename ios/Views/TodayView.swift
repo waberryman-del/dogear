@@ -27,6 +27,16 @@ struct TodayView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: DogearSpacing.space8) {
                     header
+                    // Decision #5: surfaced here regardless of how the reader
+                    // got to Today — a tapped notification or just a normal
+                    // app open after the check-in date passed both land on
+                    // this same computed `dueMidpointCheckIns`, not a
+                    // notification-tap-only path. `.first` because only one
+                    // book is realistically "reading" at a time in practice
+                    // (decision #17's hero card is singular too).
+                    if let dueEntry = library.dueMidpointCheckIns.first {
+                        MidpointCheckInCard(entry: dueEntry)
+                    }
                     // Once all 3 picks are decided, the hero card becomes the
                     // main event instead of a small card in otherwise-empty
                     // space — `isProminent` only visually matters when there's

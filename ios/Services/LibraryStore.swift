@@ -1,9 +1,10 @@
 import Foundation
 import Combine
 import SwiftUI
+import UserNotifications
 
 @MainActor
-final class LibraryStore: ObservableObject {
+final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     @Published var entries: [LibraryEntry] = []
     /// Lets a screen (e.g. Today's empty "Up Next" CTA) send the reader to
     /// another tab without a second navigation system — transient UI state,
@@ -84,7 +85,7 @@ final class LibraryStore: ObservableObject {
     private var inFlightTodayRefresh: Task<Bool, Never>?
     private var isVibeSearchInFlight = false
 
-    init() {
+    override init() {
         if let data = defaults.data(forKey: entriesKey),
            let decoded = try? JSONDecoder().decode([LibraryEntry].self, from: data) {
             entries = decoded
@@ -123,6 +124,12 @@ final class LibraryStore: ObservableObject {
         if let timestamp = defaults.object(forKey: todaysPicksDateKey) as? Date {
             todaysPicksDate = timestamp
         }
+        super.init()
+        // Decision #5: lets a tapped midpoint-check-in notification route the
+        // reader straight to Today (see the delegate methods below), and
+        // makes foreground delivery show a real banner instead of the
+        // system's default no-visible-alert-in-foreground behavior.
+        UNUserNotificationCenter.current().delegate = self
     }
 
     // MARK: - Onboarding
@@ -161,20 +168,29 @@ final class LibraryStore: ObservableObject {
     func removeFromShelf(_ bookID: String) {
         entries.removeAll { $0.book.id == bookID }
         persistEntries()
+        cancelMidpointNotification(for: bookID)
     }
 
     func startReading(_ bookID: String) {
         guard let idx = entries.firstIndex(where: { $0.book.id == bookID }) else { return }
         entries[idx].status = .reading
         entries[idx].dateStartedReading = .now
-        // Schedule the one midpoint check-in 5 days out. A local notification should be
-        // registered here in the real implementation (UNUserNotificationCenter) — this
-        // just records the intended ask date; Week 2/3 wires the actual notification.
-        entries[idx].midpointCheckIn = MidpointCheckIn(
-            askedOn: Calendar.current.date(byAdding: .day, value: 5, to: .now) ?? .now,
-            stillEnjoying: nil
-        )
+        // Decision #5: exactly one check-in per book, 5 days after starting.
+        // Real UNUserNotificationCenter scheduling below — this used to just
+        // record the intended date with a "Week 2/3 wires the actual
+        // notification" comment; that's this pass.
+        let askedOn = Calendar.current.date(byAdding: .day, value: 5, to: .now) ?? .now
+        entries[idx].midpointCheckIn = MidpointCheckIn(askedOn: askedOn, stillEnjoying: nil)
         persistEntries()
+        let book = entries[idx].book
+        Task {
+            // Requested here — the first time a book is actually started, not
+            // on cold launch — so the permission prompt has real context
+            // ("we're about to schedule something for you") instead of
+            // firing before the reader has done anything.
+            await requestNotificationPermissionIfNeeded()
+            scheduleMidpointNotification(bookID: bookID, title: book.title, at: askedOn)
+        }
     }
 
     /// Stops the current read from the hero card without going through shelf
@@ -191,17 +207,98 @@ final class LibraryStore: ObservableObject {
         entries[idx].readingGoal = nil
         entries[idx].midpointCheckIn = nil
         persistEntries()
+        cancelMidpointNotification(for: bookID)
     }
 
-    // MARK: - Midpoint check-in
+    // MARK: - Midpoint check-in (decision #5)
+
+    /// Every reading entry whose check-in date has passed and hasn't been
+    /// answered yet — the single source of truth for whether the prompt
+    /// should show, regardless of how the reader got here (tapped the
+    /// notification, or just opened the app normally days later and the
+    /// notification was missed/dismissed/never delivered). Today surfaces
+    /// this directly rather than relying on the notification tap alone.
+    var dueMidpointCheckIns: [LibraryEntry] {
+        entries.filter {
+            $0.status == .reading &&
+            $0.midpointCheckIn?.stillEnjoying == nil &&
+            ($0.midpointCheckIn?.askedOn ?? .distantFuture) <= .now
+        }
+    }
 
     func answerMidpointCheckIn(_ bookID: String, stillEnjoying: Bool) {
         guard let idx = entries.firstIndex(where: { $0.book.id == bookID }) else { return }
         entries[idx].midpointCheckIn?.stillEnjoying = stillEnjoying
         persistEntries()
+        DogearHaptics.actionCommitted()
         // Deliberately does NOT trigger a recommendation refresh — refresh is earned only
         // by finishing/shelving a book. A check-in is a signal for the *next* recommend()
         // call, not a refresh trigger itself.
+    }
+
+    /// `.notDetermined` only — never re-prompts a reader who already granted
+    /// or denied. iOS's own settings deep-link is the right recovery path
+    /// for a denied reader who changes their mind later, not us re-asking.
+    private func requestNotificationPermissionIfNeeded() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        guard settings.authorizationStatus == .notDetermined else { return }
+        _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
+    }
+
+    /// A no-op if permission was denied — `add(_:)` still succeeds (it just
+    /// won't visibly alert), so this doesn't need its own authorization
+    /// check; whatever `requestNotificationPermissionIfNeeded()` resolved to
+    /// governs delivery.
+    private func scheduleMidpointNotification(bookID: String, title: String, at date: Date) {
+        let content = UNMutableNotificationContent()
+        content.title = "Still enjoying it?"
+        content.body = "Still enjoying \(title)?"
+        content.sound = .default
+        content.userInfo = ["bookID": bookID]
+
+        // Time-interval trigger (not calendar) — the ask date is already a
+        // fixed instant computed at start-reading time, not a calendar
+        // concept that needs to survive e.g. a timezone change.
+        let interval = max(date.timeIntervalSinceNow, 1)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: midpointNotificationID(for: bookID), content: content, trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private func cancelMidpointNotification(for bookID: String) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [midpointNotificationID(for: bookID)]
+        )
+    }
+
+    private func midpointNotificationID(for bookID: String) -> String {
+        "dogear.midpointCheckIn.\(bookID)"
+    }
+
+    // MARK: - UNUserNotificationCenterDelegate
+
+    /// Without this, iOS's default behavior suppresses the alert entirely
+    /// when the notification fires while the app is already in the
+    /// foreground — the reader would never see it unless they happened to
+    /// background the app first.
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter, willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .sound]
+    }
+
+    /// Tapping the notification routes to Today, where `dueMidpointCheckIns`
+    /// (computed straight from `entries`, not from the tap event) shows the
+    /// same prompt — the tap's only job is getting the reader to the right
+    /// tab, not carrying the answer state itself.
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse
+    ) async {
+        await MainActor.run {
+            self.selectedTab = .today
+        }
     }
 
     // MARK: - Finishing a book — shelf placement IS the rating
@@ -215,6 +312,7 @@ final class LibraryStore: ObservableObject {
             entries[idx].aiWhyYouLikedIt = note
         }
         persistEntries()
+        cancelMidpointNotification(for: bookID)  // finishing early makes an unanswered check-in moot
         DogearHaptics.actionCommitted()  // Design System Section 10: "Book placed on shelf → medium impact"
         await performRefresh(blocking: true)   // earned refresh
     }
