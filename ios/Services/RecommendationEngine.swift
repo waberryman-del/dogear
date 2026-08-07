@@ -234,6 +234,40 @@ struct RecommendationEngine {
         let decoded = try JSONDecoder().decode([String: String].self, from: data)
         return decoded["note"] ?? ""
     }
+
+    /// Stage 1 (decisions #33/#37/#39.3-4): a single book's "why this fits
+    /// you" verdict + best-effort Recognition, blended with the reader's
+    /// taste profile the same way `nextPicks`/`vibeSearch`/`dailyPicks` are.
+    /// `LibraryStore` decides how to use the two fields in the response —
+    /// this call always runs once per book regardless of whether a prior
+    /// reason exists (decision #37, amended), so it stays a plain passthrough
+    /// with no caching logic of its own.
+    func fetchVerdict(
+        for book: Book,
+        basedOn library: [LibraryEntry],
+        onboardingGenres: Set<Genre>
+    ) async throws -> BookVerdictResponse {
+        let payload: [String: Any] = [
+            "book": [
+                "title": book.title,
+                "author": book.author,
+                "summary": book.summary as Any? ?? NSNull()
+            ],
+            "onboarding_genres": onboardingGenres.map { $0.rawValue },
+            "read_history": readHistoryPayload(from: library),
+            "currently_reading": currentlyReadingPayload(from: library)
+        ]
+        // book-verdict.js's vercel.json maxDuration is 15s — 20s headroom,
+        // same margin as why-liked-it.js/book-search.js.
+        let request = try makeRequest(path: "book-verdict", body: payload, timeout: 20)
+        let data = try await send(request, endpoint: "book-verdict")
+        do {
+            return try JSONDecoder().decode(BookVerdictResponse.self, from: data)
+        } catch {
+            print("[RecommendationEngine] book-verdict decode failed: \(error) — raw: \(String(data: data, encoding: .utf8) ?? "<non-utf8>")")
+            throw error
+        }
+    }
 }
 
 enum BackendError: LocalizedError {
@@ -255,6 +289,13 @@ struct VibeSearchResult {
     /// results but every one was already shown," which need different, honest
     /// copy rather than one generic empty-state message.
     let rawResultCount: Int
+}
+
+/// Stage 1: `book-verdict.js`'s response. Not `private` — `LibraryStore`
+/// (decision #37's reuse-or-fetch orchestration) consumes this directly.
+struct BookVerdictResponse: Codable {
+    let verdict: String
+    let recognition: String?
 }
 
 private struct RecommendationResponse: Codable {

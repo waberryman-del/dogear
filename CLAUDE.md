@@ -58,9 +58,9 @@ silently reordering these, stop and flag it explicitly instead of just doing it.
   exclusion load, and the midpoint check-in built and verified end-to-end. See
   `LAUNCH-ROADMAP.md` for the authoritative, detailed stage-by-stage status — this
   file holds the locked decisions, that file holds current progress. Stage 1 (the
-  book detail page, decisions #31 and #36-39 below) is next and is fully spec'd but not yet built —
-  do not start Stage 1 code without the dedicated planning/inspect-and-plan pass,
-  same discipline as the design system and Vibe Search got.**
+  book detail page, decisions #31 and #36-39 below) is built per decision 39's
+  full section-by-section spec — compiles clean, not yet walked through on a
+  simulator/device. Update `LAUNCH-ROADMAP.md` once that on-device pass happens.**
 - **Phase 4 — Design pass.** Real app icon and brand colors — see decision #23 below,
   which now supersedes the placeholder forest/ink/brass palette — the fold-gesture
   signature interaction (decision #6), empty states, loading polish. Deliberately
@@ -374,15 +374,18 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
     (decision 33) gets a small, contained loading placeholder if it isn't
     cached yet — never hold the entire page hostage waiting on one AI call
     when everything else is already available.
-37. **[Stage 1] Reuse existing reasoning when available.** If a book
-    arrived via Today, Search's rows, or Vibe Search — all of which already
-    generate a specific "why this fits" reason as part of their normal
-    response — the detail page reuses that exact reasoning as its verdict
-    directly, no new AI call, appears instantly. A fresh verdict (via a new
-    lightweight backend call) is only generated when no prior reasoning
-    exists — i.e. books found through Search's manual title/author/ISBN
-    lookup, which has no AI reasoning attached. This cached-or-generated
-    behavior is what decision 33's caching applies to.
+37. **[Stage 1, AMENDED by decision 39.4 — see there for why] Reuse existing
+    reasoning when available.** If a book arrived via Today, Search's rows,
+    or Vibe Search — all of which already generate a specific "why this
+    fits" reason as part of their normal response — the detail page uses
+    that exact reasoning as its verdict directly, appears instantly, no
+    waiting. `book-verdict.js` (the lightweight backend call) still runs
+    once for this book regardless, per decision 39.4, but only to supply the
+    Recognition section — its own `verdict` field is discarded whenever a
+    prior reason exists. Only when no prior reasoning exists at all (Search's
+    manual title/author/ISBN lookup) does the detail page use that call's
+    `verdict` field too. Either way, the call happens at most once per book,
+    ever — this is what decision 33's caching applies to.
 38. **[Stage 1] Missing synopsis fallback**: a short, calm line — "No
     synopsis available for this edition." — not a silently empty section.
     Consistent with the app's existing pattern of being honest about known
@@ -410,19 +413,45 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
        has a structured "awards" field — this data, when it exists at
        all, is typically embedded as plain text inside the description
        (e.g. Beloved's summary literally contains "PULITZER PRIZE
-       WINNER"). Generate this via the SAME AI call that produces the
-       verdict (decision 37's reuse principle extends here — don't add a
-       second AI call) — have that call also extract/note any genuinely
-       notable recognition it finds in the source description, and omit
-       the section cleanly when nothing real is found. Never fabricate an
-       award that isn't actually evidenced in the source text.
+       WINNER"). **[AMENDED — new endpoint instead, not a shared prompt]**
+       The original spec here said to generate Recognition via the same AI
+       call that produces the verdict, extending decision 37's reuse
+       principle to avoid a second call. In practice that meant adding a
+       recognition field to `recommend.js`/`vibe-search.js`/`daily-picks.js`'s
+       existing prompts — and those three have now hit the exact same
+       `max_tokens` truncation bug *twice* (see decision 21's pattern note)
+       from changes with far smaller footprints than this. Risking their
+       now-hard-won stability for a best-effort section wasn't worth it.
+       **Actual approach**: a new endpoint, `book-verdict.js`, is called
+       once per book, always — regardless of whether a prior reason exists.
+       It returns both `verdict` and `recognition`. When a prior reason
+       exists (decision 37), only `recognition` is used and the response's
+       `verdict` is discarded; when it doesn't, both are used. Net effect:
+       still exactly one AI call per book, ever, cached per decision 33 —
+       the "don't add a second call" goal is preserved, just via a
+       dedicated small endpoint instead of three already-stable ones.
+       Omit the section cleanly when `recognition` comes back null — never
+       fabricate an award that isn't actually evidenced in the source text.
     5. **Synopsis** (decision 38's fallback applies here).
     6. **Actions** — status-dependent per decision 31, anchored where
-       always reachable.
+       always reachable. In practice this also had to cover the
+       reading-to-finished transition itself: nothing in the app had ever
+       called `placeOnShelf` from any UI before this — a "Finished — place
+       on a shelf" action on the `reading` state, and a "Re-place on a
+       shelf" action on `finished`, are this page's way of closing that gap,
+       not scope beyond decision 31's intent.
     Formatting principle across the whole page: consistent, easy to parse
     at a glance — the at-a-glance strip in particular should render
     identically in structure every time (same order, same visual
     treatment), not vary book to book.
+    **Built** — `BookDetailView.swift` rewritten to this section order;
+    `book-verdict.js` added; `publicationYear` added to `Book` and to all
+    four backend `lookupBook()` implementations; `LibraryEntry` gained
+    `cachedVerdict`/`cachedRecognition`/`verdictCachedAtFinishedCount`
+    (decision 33's cache), with an in-memory session-only cache in
+    `LibraryStore` covering books not yet on a shelf. Compiles clean
+    (`xcodebuild build` succeeded); not yet walked through on a simulator/
+    device — treat as implemented, not yet verified end-to-end.
 
 ## Design identity
 - **Palette**: unchanged from the earlier prototype and still the right call — deep

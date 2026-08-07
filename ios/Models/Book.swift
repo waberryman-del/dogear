@@ -8,6 +8,7 @@ struct Book: Identifiable, Codable, Equatable {
     var pageCount: Int?
     var genres: [String]
     var summary: String?
+    var publicationYear: Int?   // Stage 1 (decision #39.2, at-a-glance strip)
 }
 
 /// Fixed genre list for onboarding — pick up to 5. Keep this list short and concrete;
@@ -55,6 +56,19 @@ struct LibraryEntry: Identifiable, Codable, Equatable {
     var highlights: [Highlight]
     var currentPage: Int?             // manual entry only — no quick-add, no slider (decision #18)
     var readingGoal: ReadingGoal?      // set/edited from the Today hero card
+
+    // Stage 1 (decisions #33/#37/#39.3-4): the detail page's "why this fits
+    // you" verdict and (best-effort) Recognition section, cached so they're
+    // generated at most once per book, not on every detail-view visit.
+    // `cachedVerdict` is seeded for free from the original recommendation
+    // reason when one exists (Today/Search-rows/Vibe Search), or from
+    // `book-verdict.js` when it doesn't (e.g. Search's manual lookup).
+    // `verdictCachedAtFinishedCount` is decision #33's invalidation key —
+    // both fields are considered stale once the reader's finished-book count
+    // (a cheap proxy for "taste profile changed") no longer matches.
+    var cachedVerdict: String? = nil
+    var cachedRecognition: String? = nil
+    var verdictCachedAtFinishedCount: Int? = nil
 }
 
 /// Target page + target date, set and edited from the Today hero card

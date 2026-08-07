@@ -53,6 +53,15 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
     /// it's generated as a pick, regardless of how the reader decides on it.
     @Published private(set) var notInterestedBooks: [NotInterestedRecord] = []
 
+    /// Stage 1 (decision #33/#39.3-4), un-shelved half: a book with no
+    /// `LibraryEntry` yet (e.g. still just a Search/manual-lookup result) has
+    /// nowhere persisted to cache a verdict — this in-memory, session-only
+    /// cache covers that case. Cleared on relaunch, which is fine: a book the
+    /// reader never added was never going to need the verdict again anyway.
+    /// Promoted into the persisted `LibraryEntry` fields the moment a book
+    /// this covers gets added to the shelf (see `addToShelf`).
+    private var sessionVerdictCache: [String: (verdict: String?, recognition: String?)] = [:]
+
     private let recEngine = RecommendationEngine()
     private let defaults = UserDefaults.standard
     private let entriesKey = "dogear.entries"
@@ -151,14 +160,28 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
 
     // MARK: - Adding + starting books
 
-    func addToShelf(_ book: Book, status: ReadStatus = .wantToRead) {
+    /// `reason` is the original recommendation reasoning, when the caller has
+    /// one (Today's daily picks, Search's rows, Vibe Search results) — Stage 1
+    /// decision (see CLAUDE.md decision #37): store it immediately as this
+    /// entry's cached verdict so the detail page never has to regenerate a
+    /// reason that already existed. A manual Search lookup has no `reason`,
+    /// which is fine — `verdictAndRecognition(for:existingReason:)` fetches
+    /// one lazily the first time the detail page actually needs it. Also
+    /// promotes anything already in `sessionVerdictCache` from browsing this
+    /// book before adding it, so that work isn't thrown away.
+    func addToShelf(_ book: Book, status: ReadStatus = .wantToRead, reason: String? = nil) {
         guard !entries.contains(where: { $0.book.id == book.id }) else { return }
+        let sessionCached = sessionVerdictCache[book.id]
         entries.append(LibraryEntry(
             book: book, status: status, dateAdded: .now,
             dateStartedReading: status == .reading ? .now : nil,
             dateFinished: nil, shelfPlacement: nil,
-            aiWhyYouLikedIt: nil, midpointCheckIn: nil, highlights: []
+            aiWhyYouLikedIt: nil, midpointCheckIn: nil, highlights: [],
+            cachedVerdict: reason ?? sessionCached?.verdict,
+            cachedRecognition: sessionCached?.recognition,
+            verdictCachedAtFinishedCount: sessionCached != nil ? finishedBookCount : nil
         ))
+        sessionVerdictCache.removeValue(forKey: book.id)
         persistEntries()
     }
 
@@ -301,6 +324,67 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
         }
     }
 
+    // MARK: - Stage 1: book detail verdict + recognition (decisions #33/#37/#39)
+
+    /// Decision #33's invalidation key — a cheap proxy for "the reader's
+    /// taste profile has meaningfully changed" without a full history re-diff.
+    private var finishedBookCount: Int {
+        entries.filter { $0.status == .finished }.count
+    }
+
+    /// Resolves the detail page's verdict + recognition for one book,
+    /// following decision #37 (amended) and #39.4: `book-verdict.js` runs
+    /// once per book — used for both fields when no `existingReason` was
+    /// passed in from the entry point, used only for `recognition` when one
+    /// was (the verdict field of the response is discarded in that case,
+    /// `existingReason` wins). Cached afterward per decision #33: on the
+    /// matching `LibraryEntry` if the book is on the shelf, in
+    /// `sessionVerdictCache` otherwise. Returns `(nil, nil)` verdict/
+    /// recognition only if the network call itself fails — the caller
+    /// decides how to degrade (decision #36: never hold up the rest of the
+    /// page on this).
+    func verdictAndRecognition(
+        for book: Book, existingReason: String?
+    ) async -> (verdict: String?, recognition: String?) {
+        let shelfIndex = entries.firstIndex { $0.book.id == book.id }
+        let currentCount = finishedBookCount
+
+        if let idx = shelfIndex {
+            let entry = entries[idx]
+            let cacheValid = entry.verdictCachedAtFinishedCount == currentCount
+                && entry.cachedVerdict != nil && entry.cachedRecognition != nil
+            if cacheValid {
+                return (entry.cachedVerdict, entry.cachedRecognition)
+            }
+        } else if let cached = sessionVerdictCache[book.id],
+                  cached.verdict != nil, cached.recognition != nil {
+            return cached
+        }
+
+        guard let response = try? await recEngine.fetchVerdict(
+            for: book, basedOn: entries, onboardingGenres: onboardingGenres
+        ) else {
+            // Degrade to whatever we already had (an existing reason still
+            // counts as a perfectly good verdict) rather than surfacing
+            // nothing just because the recognition half failed to load.
+            return (existingReason, nil)
+        }
+
+        let verdict = existingReason ?? response.verdict
+        let recognition = response.recognition
+
+        if let idx = shelfIndex {
+            entries[idx].cachedVerdict = verdict
+            entries[idx].cachedRecognition = recognition
+            entries[idx].verdictCachedAtFinishedCount = currentCount
+            persistEntries()
+        } else {
+            sessionVerdictCache[book.id] = (verdict, recognition)
+        }
+
+        return (verdict, recognition)
+    }
+
     // MARK: - Finishing a book — shelf placement IS the rating
 
     func placeOnShelf(_ bookID: String, placement: ShelfPlacement) async {
@@ -412,7 +496,7 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
 
         switch decision {
         case .wantToRead:
-            addToShelf(pick.book, status: .wantToRead)
+            addToShelf(pick.book, status: .wantToRead, reason: pick.reason)
         case .notInterested:
             recordNotInterested(pick.book)
         }

@@ -36,7 +36,7 @@ struct StartReadingSheet: View {
                         section(title: "FROM TODAY'S PICKS") {
                             ForEach(recommendedBooks) { rec in
                                 pickerRow(book: rec.book) {
-                                    library.addToShelf(rec.book, status: .reading)
+                                    library.addToShelf(rec.book, status: .reading, reason: rec.reason)
                                     dismiss()
                                 }
                             }

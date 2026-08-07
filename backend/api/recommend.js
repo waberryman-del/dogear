@@ -506,8 +506,18 @@ async function safeLookupBook(title, author) {
       pageCount: null,
       genres: [],
       summary: null,
+      publicationYear: null,
     };
   }
+}
+
+// Stage 1 (decision #39.2, at-a-glance strip): Google Books' publishedDate is
+// a free-form string ("2004", "2004-09-14", occasionally just a decade) — the
+// leading 4-digit year is all the at-a-glance strip needs, so pull that and
+// discard the rest rather than parsing a full date we'd never display.
+function parsePublicationYear(publishedDate) {
+  const match = /^\d{4}/.exec(publishedDate ?? "");
+  return match ? parseInt(match[0], 10) : null;
 }
 
 async function lookupBook(title, author) {
@@ -532,6 +542,7 @@ async function lookupBook(title, author) {
       pageCount: info?.pageCount ?? null,
       genres: info?.categories ?? [],
       summary: info?.description ?? null,
+      publicationYear: parsePublicationYear(info?.publishedDate),
     };
   }
 
@@ -560,6 +571,7 @@ async function lookupOpenLibrary(title, author) {
       pageCount: doc?.number_of_pages_median ?? null,
       genres: doc?.subject?.slice(0, 3) ?? [],
       summary: null,
+      publicationYear: doc?.first_publish_year ?? null,
     };
   } catch (err) {
     console.error("Open Library lookup failed:", err);
@@ -571,6 +583,7 @@ async function lookupOpenLibrary(title, author) {
       pageCount: null,
       genres: [],
       summary: null,
+      publicationYear: null,
     };
   }
 }

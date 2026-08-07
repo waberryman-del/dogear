@@ -1,6 +1,6 @@
 // api/book-search.js
 // POST { query: "title, author, or ISBN text" }
-// Returns { results: [{ id, title, author, coverURL, pageCount, genres, summary }] }
+// Returns { results: [{ id, title, author, coverURL, pageCount, genres, summary, publicationYear }] }
 //
 // Deploy target: Vercel. Runtime: Node.js serverless function.
 //
@@ -56,6 +56,13 @@ function isLikelyISBN(text) {
   return /^\d{10}(\d{3})?$/.test(stripped);
 }
 
+// Stage 1 (decision #39.2) — see recommend.js for the fuller rationale, same
+// leading-4-digit-year parse of Google Books' free-form publishedDate string.
+function parsePublicationYear(publishedDate) {
+  const match = /^\d{4}/.exec(publishedDate ?? "");
+  return match ? parseInt(match[0], 10) : null;
+}
+
 async function searchGoogleBooks(query) {
   const key = process.env.GOOGLE_BOOKS_API_KEY;
   const keyParam = key ? `&key=${key}` : "";
@@ -79,6 +86,7 @@ async function searchGoogleBooks(query) {
         pageCount: info.pageCount ?? null,
         genres: info.categories ?? [],
         summary: info.description ?? null,
+        publicationYear: parsePublicationYear(info.publishedDate),
       };
     });
   } catch (err) {
@@ -102,6 +110,7 @@ async function searchOpenLibrary(query) {
       pageCount: doc.number_of_pages_median ?? null,
       genres: doc.subject?.slice(0, 3) ?? [],
       summary: null,
+      publicationYear: doc.first_publish_year ?? null,
     }));
   } catch (err) {
     console.error("Open Library search failed:", query, err?.message);

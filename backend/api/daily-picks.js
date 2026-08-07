@@ -305,8 +305,16 @@ async function safeLookupBook(title, author) {
       pageCount: null,
       genres: [],
       summary: null,
+      publicationYear: null,
     };
   }
+}
+
+// Stage 1 (decision #39.2) — see recommend.js for the fuller rationale, same
+// leading-4-digit-year parse of Google Books' free-form publishedDate string.
+function parsePublicationYear(publishedDate) {
+  const match = /^\d{4}/.exec(publishedDate ?? "");
+  return match ? parseInt(match[0], 10) : null;
 }
 
 // Same two-source metadata pattern as recommend.js/vibe-search.js: Google
@@ -338,6 +346,7 @@ async function lookupBook(title, author) {
       pageCount: info?.pageCount ?? null,
       genres: info?.categories ?? [],
       summary: info?.description ?? null,
+      publicationYear: parsePublicationYear(info?.publishedDate),
     };
   }
 
@@ -363,6 +372,7 @@ async function lookupOpenLibrary(title, author) {
       pageCount: doc?.number_of_pages_median ?? null,
       genres: doc?.subject?.slice(0, 3) ?? [],
       summary: null,
+      publicationYear: doc?.first_publish_year ?? null,
     };
   } catch (err) {
     console.error("Open Library lookup failed:", err);
@@ -374,6 +384,7 @@ async function lookupOpenLibrary(title, author) {
       pageCount: null,
       genres: [],
       summary: null,
+      publicationYear: null,
     };
   }
 }
