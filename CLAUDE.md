@@ -9,19 +9,16 @@ Architecture (locked — don't relitigate this each session)
 Client: SwiftUI, iOS 17+, MVVM. State lives in LibraryStore (ObservableObject),
 injected via .environmentObject. No third-party dependency managers needed for v1 —
 keep it Apple-native (URLSession, Codable, SwiftData for persistence).
-Persistence: SwiftData (not Core Data, not a remote DB) is still the intended v1
-end state — local-first, library lives on-device, CloudKit sync only after core UX
-is solid. [UPDATED — Launch Roadmap Stage 0] LibraryStore.entries (shelf status,
-reading progress, goals) was confirmed in-memory-only and losing the entire shelf
-on every force-quit — this was fixed as a stopgap via the same UserDefaults JSON
-pattern already used for shownBooks/notInterestedBooks/todaysPicks/recommendation
-Rows (entriesKey + persistEntries(), called from every entries-mutating method,
-loaded in init()). Confirmed on a real device: add a book, start reading, set page
-+ goal, force-quit, reopen — everything survives. The data-loss risk is closed.
-The full SwiftData migration described below is still the legitimate long-term
-answer (proper schema, CloudKit-readiness, no hand-rolled encode/decode) — it's
-just no longer an urgent blocker, and can happen on its own schedule rather than
-gating everything else.
+Persistence: SwiftData (not Core Data, not a remote DB) is the eventual, ideal
+answer for v1, but is NOT what's currently implemented. Current state (fixed,
+verified working): LibraryStore.entries persists via the same simple
+UserDefaults JSON-encoding pattern used for the store's other persisted properties
+— confirmed on a real device that shelf status, reading progress, and goals all
+survive a force-quit. This was a deliberate, lower-risk stopgap chosen over an
+urgent full SwiftData migration when total data loss was discovered and fixed. The
+full SwiftData migration remains a legitimate future improvement (better querying,
+eventual CloudKit sync), but is no longer an urgent, blocking data-loss risk — don't
+treat it as more urgent than it currently is.
 Backend: Vercel serverless functions in backend/api/ — recommend.js and
 why-liked-it.js exist; vibe-search.js is new in Phase 2 (see below). All hold
 ANTHROPIC_API_KEY server-side and call the Anthropic Messages API
@@ -44,31 +41,6 @@ This is the actual plan going forward. If any future session (Claude Code or oth
 proposes jumping ahead to a later phase before the current one is genuinely done, or
 silently reordering these, stop and flag it explicitly instead of just doing it.
 
-[Launch Roadmap Stage 0 — CLOSED, no open caveats] Per `LAUNCH-ROADMAP.md`,
-Stage 0 ("Stabilize — no new features, no new screens") is fully done, all
-4 items confirmed with real evidence, not assumed: persistence was fixed
-and proven on a real device (add a book, set a goal, force-quit, reopen —
-everything survives, see Persistence above); Today's post-decision hero
-moment was rebuilt on the proven compact card and refined through several
-real rounds of feedback (no pace/pressure language, time-aware greeting
-redesign); recommend.js/vibe-search.js were confirmed holding up under a
-real, heavy-exclusion load (~60-book shown_books list) — including a fix
-(recommend.js's max_tokens and retry count) that was re-tested clean
-afterward; and the midpoint check-in (decision #5) — previously just a
-data field, `answerMidpointCheckIn()` dead code, no notification anywhere
-in the codebase — is now built for real: `UNUserNotificationCenter`
-scheduling on `startReading()`, permission requested in-context (not on
-cold launch), a real yes/no UI prompt on Today that surfaces the same way
-whether the reader taps the notification or just opens the app normally
-after the date passes, and the answer verified reaching
-recommend.js/vibe-search.js as `still_enjoying_midpoint` in the actual
-request payload. See `LAUNCH-ROADMAP.md` for the full, current status of
-every stage. Stage 1 (book detail page) is next, but per that roadmap's
-own instruction, it does not start until a dedicated planning conversation
-happens first — the same treatment the design system and Vibe Search specs
-got. Being unblocked to plan Stage 1 is not the same as being unblocked to
-build it.
-
 Phase 1 — done. Onboarding (genre picks), Today screen with real AI
 recommendations, tap-to-detail, add to shelf, a basic My Shelf screen, real cover
 art (Google Books + Open Library fallback, https-only URLs).
@@ -78,11 +50,17 @@ genre — and gets AI-curated book matches. See "Vibe search spec" below. This i
 what differentiates Dogear from Goodreads/StoryGraph-style trackers; treat it as
 a first-class feature, not an experiment bolted onto Today.
 Phase 3 — Real organization. The three-shelf placement system (decision #2/#3),
-the "start reading" flow, midpoint check-ins (decision #5). This turns My Shelf
-from a static list into the actual product. [UPDATED — Launch Roadmap Stage 0]
-This no longer blocks on a SwiftData migration — entries persistence was fixed via
-the UserDefaults JSON stopgap (see Persistence, above). SwiftData is still the
-right long-term migration, just no longer a Phase 3 dependency.
+the "start reading" flow, midpoint check-ins (decision #5), and the SwiftData
+persistence migration this all depends on. This turns My Shelf from a static list
+into the actual product. Status: Stage 0 of this phase (per LAUNCH-ROADMAP.md)
+is CLOSED — persistence fixed and verified, the Today hero moment rebuilt and
+refined, recommend.js/vibe-search.js confirmed reliable under heavy real-world
+exclusion load, and the midpoint check-in built and verified end-to-end. See
+LAUNCH-ROADMAP.md for the authoritative, detailed stage-by-stage status — this
+file holds the locked decisions, that file holds current progress. Stage 1 (the
+book detail page, decisions #31-34 below) is next and is spec'd but not yet built —
+do not start Stage 1 code without the dedicated planning/inspect-and-plan pass,
+same discipline as the design system and Vibe Search got.
 Phase 4 — Design pass. Real app icon and brand colors — see decision #23 below,
 which now supersedes the placeholder forest/ink/brass palette — the fold-gesture
 signature interaction (decision #6), empty states, loading polish. Deliberately
@@ -109,8 +87,7 @@ Book, Genre (fixed onboarding list), ShelfPlacement (keepForever / gladIReadIt /
 shouldveStopped — this IS the rating, there is no star score anywhere in this app),
 LibraryEntry (status: wantToRead/reading/finished/dnf, dateStartedReading,
 shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlights),
-MidpointCheckIn, Highlight, Recommendation. Migrate the existing plain structs to
-@Model classes for SwiftData when you start Week 1 persistence work.
+MidpointCheckIn, Highlight, Recommendation.
 
 Product decisions (locked in conversation with Walker — do not silently deviate)
 Onboarding: first launch asks the reader to pick up to 5 genres from the fixed
@@ -133,9 +110,12 @@ Mid-book check-in: exactly once per book, 5 days after it's marked "reading"
 yes/no prompt: "still enjoying this one?" This requires a local notification
 (UNUserNotificationCenter) to surface at the right time even if the app isn't
 open — this is a local, on-device notification, not a server push, so it doesn't
-conflict with the "no push notifications" rule below.
+conflict with the "no push notifications" rule below. Built and verified
+end-to-end — real notification scheduling, real UI prompt, answer persists and
+reaches the backend payload.
 Signature interaction: press-and-hold a book cover to fold its corner down —
-this is how you save/bookmark, not a heart or generic bookmark icon.
+this is how you save/bookmark, not a heart or generic bookmark icon. Not yet built
+— Phase 4 work.
 The recommendation engine and vibe search are the product, not a feature.
 When either needs a tradeoff between "ship something plausible" and "actually
 reason well about this specific reader/query," take the slower, better-reasoned
@@ -150,214 +130,159 @@ existing retry, the backend may backfill remaining slots from the
 oldest entries in shownBookIDs (least-recently-shown first) rather
 than returning a thin or empty result. This is a scarcity fallback that
 only activates when real usage has genuinely exhausted fresh
-candidates — exactly the "user behavior warrants it" condition Walker
-specified — not a default aging or capping policy. Log whenever this
-fallback actually fires, so we can see how often it's really needed
-rather than guessing.
+candidates — not a default aging or capping policy. Log whenever this
+fallback actually fires.
 Reading history sent to the backend must be recency-ordered, and the prompts
-must say so explicitly — e.g. "entries below are ordered most-recent-first;
-weight recent shelf placements more heavily than old ones, and if the pattern
-is shifting (e.g. recent picks trend toward a different tone/genre than older
-ones), follow the recent trend, not the historical average." This applies to
-recommend.js's existing prompt too, not just new work.
+must say so explicitly — weight recent shelf placements more heavily than old
+ones, and if the pattern is shifting, follow the recent trend, not the historical
+average.
 Vibe search must blend the typed query with the reader's actual taste
 profile, not interpret it as a cold, context-free phrase. vibe-search.js
-needs the same profile inputs recommend.js gets (onboarding genres, shelf
-placement history, why-liked-it notes) alongside the free-text query, and its
-system prompt should explicitly instruct the model to filter/interpret the
-vibe through that specific reader's taste — "atmospheric and slow" should
-produce different results for two readers with different histories.
+needs the same profile inputs recommend.js gets alongside the free-text query —
+"atmospheric and slow" should produce different results for two readers with
+different histories.
 [AMENDED, then further superseded by decision 12] Vibe Search ("Find")
-has its own tab — originally added as a 2-tab (Today/Find) amendment,
-now simply one of the full 5 tabs per decision 12. Today and Find remain
-distinct surfaces: Today is the once-daily curated ritual (decision 24),
-Find is on-demand, query-driven discovery blended with taste (decision 10).
+has its own tab — now simply one of the full 5 tabs per decision 12. Today
+and Find remain distinct surfaces: Today is the once-daily curated ritual
+(decision 24), Find is on-demand, query-driven discovery blended with taste
+(decision 10).
 [AMENDED — full 5-tab bar now] Build the full tab bar: Today, Search,
-Vibe (Find), Shelf, Profile. The earlier "no empty placeholder tabs"
-reasoning held while Search/Shelf/Profile had no real content — they now
-do (see the Today/Search redesign below and decision 25).
+Vibe (Find), Shelf, Profile.
 The initial Vibe Search interface is free text only. No genre dropdowns,
 filters, sliders, or structured controls beside the text field, ever, at entry.
 Contextual one-tap refinements (e.g. "slower," "less dark," "more
 literary") may appear only after results are returned — generated/selected
 based on the original query and current results, not a permanent generic
-filter set. Tapping one refines the existing query while preserving the
-original search context.
+filter set. Built and working.
 The Dogear Design System (docs/Dogear_Design_System_v0_1_1_.docx in this
-repo) is the source of truth for all visual and interaction design — colors,
-typography, spacing, radii, motion, haptics, component anatomy, and screen
-specs. Do not invent new visual patterns when the system already documents
-one.
-Do not begin Phase 3 work during the Vibe Search / design-system pass —
-historical note, that pass is done; kept for record.
-[Phase 3 opening] Today shows a "Currently Reading" hero status card.
-The hero card shows cover, title, author, page progress, and (if set) a
-reading goal. If nothing is currently being read, the card invites
-starting something from the shelf — never a blank space. Reading goals
-are: a target page count + a target date, set/edited from the hero
-card. Progress is updated via simple manual page-number entry/stepper —
-no quick-add buttons, no slider. [AMENDED — no pace indicator] The hero
-card shows a calm, factual stats line only: pages remaining and how
-long the reader has been on the book (e.g. "142 pages left · Started 3
-days ago"). No "on track" / "behind" / any comparison to the goal's
-timeline — this app should never feel like it's judging reading speed.
-Without a goal set, show just pages remaining (or pages read so far),
-nothing else.
-[SUPERSEDED — see decision 24] The old row-based Today model. Rows are
-dynamically generated and specific to the reader — not fixed genre buckets.
-Mix of taste-anchored rows (grounded in specific books/patterns from real
-history, honest specific titles — "Because you loved Beloved," not "More
-Fiction") and at least one explicit discovery/stretch row. This row model
-no longer lives on Today — it moved to the Search tab (decision 25). The
-underlying engine is NOT thrown away — repurposed to power Search's
-default browsing content instead of Today's feed.
-These rows reuse the existing recommendation engine, not a parallel
-system — same shown-book exclusion (decision 8), recency-weighting
-(decision 9), and taste-blending (decision 10). Still true under decision
-24/25 — just serving Search instead of Today now.
-Reliability: backend book-metadata lookups (Google Books → Open
-Library fallback) must not let one book's failure take down the whole
-recommendation/vibe-search response — wrap per-book lookups so a single
-failure degrades gracefully. Function timeouts generous enough to cover
-Claude's response time plus metadata lookups with retries.
-[AMENDED — known, accepted risk, not a confirmed problem] recommend.js's
-per-row retry can now take up to 3 sequential Claude attempts (first
-attempt + 2 broadened retries) before falling back to backfill — added
-after real heavy-exclusion testing (~60-book shown_books list) showed one
-retry alone wasn't enough to recover a row that failed twice in a row. A
-worst-case row that genuinely needs all 3 attempts (~15-20s each) could
-approach the 60s Vercel maxDuration for this endpoint. This has not
-happened in testing — every re-test after the fix resolved on the first
-attempt — but it hasn't been ruled out either, since it depends on Claude's
-behavior under conditions not yet reproduced. Watch for it if a real
-reader's shown_books list grows large; don't treat it as fixed until it's
-actually been seen to hold up at that scale.
-(intentionally reserved — no content; renumbering avoided to prevent
-invalidating other decisions' cross-references. If a real decision 22 is
-needed later, insert it here.)
-[Phase 4 reference — do not act on this yet] A finished brand board
-exists at docs/brand-board.png. When Phase 4 actually starts, this
-board — not the current placeholder palette or docs/Dogear_Design_System_v0_1_1_.docx
-— is the intended source of truth. It includes: a real app icon (green
-rounded-square with a dog-ear/dog-profile mark), a refined palette
-(
-#0F2B22, 
-#2E4A3A, 
-#F6F1E7, 
-#E7DECA, 
-#C79A62 — distinct from
-the current 
-#1F3A2E-based placeholder set), Playfair Display for
-headlines paired with Inter for body/UI text, and color-coded shelf
-spines matching decision #2/#3's three shelves (deep green for "keep
-forever," warm tan for "glad I read it," oxblood/rust for "should've
-stopped"). It also shows a fully designed 5-tab bar (Home / Discover /
-Ask Dogear / Library / Profile) — this has now been substantially
-adopted early (decisions 12/24/25), ahead of the original Phase 4
-timeline. Phase 4's remaining job for this board is matching its exact
-visual execution (icon, palette, typography, shelf art) — not the tab
-structure, which already exists. Do not start building toward this
-board's exact visuals during Phase 3 work.
-[Major Today redesign, replaces decision 19's row model on Today]
-Today becomes a once-daily ritual, not a browsable feed. Once per
-calendar day, the reader is shown exactly 3 curated picks. For each,
-a binary decision: want to read (adds to shelf, status
-wantToRead — does NOT auto-start reading, see decision 26) or
-not interested (dismissed — see decision 27). Today's screen
-composition: if the reader has a currently-reading book AND today's 3
-picks aren't fully decided yet, show BOTH at once — hero card on top,
-undecided daily picks below. Once all 3 are decided, that section
-clears until tomorrow's picks generate. Much smaller, simpler generation
-task than the old row model (3 books once a day vs. 2-3 rows of 4-6 on
-every refresh) — expect this to be meaningfully faster and more reliable
-by construction.
-New Search tab. Two things live here: (1) real search by title,
-author, or ISBN against the existing Google Books/Open Library metadata
-lookups. (2) The AI-personalized row-browsing experience from the old
-decision 19 lives here now — same engine, same taxonomy, same
-exclusion/recency/taste-blending (decisions 8-10, 20), just relocated
-from Today to Search.
-"Want to read" and "start reading" are always separate, explicit
-actions. Adding a book to the shelf (from Today, Search, or Vibe
-Search) never automatically starts it as currently-reading. Starting
-to read is a deliberate action from My Shelf.
-"Not interested" is a real but moderate negative signal — not as
-strong as "should've stopped" on a finished book, but a definite push
-away from that pattern in future recommendations. Track it distinctly
-from shelf placements, factor it into both Today's daily picks and
-Search's rows.
-Profile tab scope, for now: basic reading stats (books finished,
-current streak or similar) plus app settings. Real content, not a
-placeholder, but intentionally minimal.
-29. **Today's header**: no "DOGEAR" wordmark needed at the top — just the
-    time-aware greeting ("Good morning" / "Good afternoon" / "Good
-    evening"), in a larger, more prominent type size than previously shown.
-    **[AMENDED — final behavior]** If the reader has set a name, only their
-    first name is shown (a stored "Walker Berryman" greets as "Walker," not
-    the full string), and it stacks on its own line below the greeting —
-    not "Good evening, Walker" on one line, but "Good evening" / "Walker"
-    on two. Name source for now: a simple optional "Your name" field in
-    Profile settings (plain text, no validation needed) — if blank, no
-    second line at all, just the time-of-day phrase alone. **Forward note,
-    not to act on now**: once real accounts/login exist (a future phase,
-    explicitly not v1 — see "What NOT to build in v1"), this manual field
-    should be replaced by the real account name. Record this intent so it
-    isn't lost, don't build login now.
-30. **My Shelf reorganization**: no longer a flat grid of everything. Real
-    sections, in order: **Currently Reading** (a real list — can be more
-    than one book; this is separate from the hero card's single-book
-    spotlight on Today, which shows only the most recent — both are valid,
-    different views of the same underlying data, not a conflict), **Want to
-    Read** (the same list Today's "Up Next" already previews under the hero
-    card — one underlying data source, two places it's shown), then the
-    three finished-book shelves per decision #3: **Keep Forever**, **Glad I
-    Read It**, **Should've Stopped**. This finally gives want-to-read/
-    currently-reading books — which don't have a `shelfPlacement` and never
-    belonged in the three finished shelves — an honest home.
+repo) is the source of truth for all visual and interaction design.
+(historical — the Vibe Search/design-system pass this referred to is complete.)
+[Phase 3] Today shows a "Currently Reading" hero status card. Built,
+rebuilt once after initial dissatisfaction, refined into its current working
+form.
+Reading goals are: a target page count + a target date, set/edited
+from the hero card. Progress via manual page-number entry/stepper. Ambient
+pace-comparison language ("ahead/behind") is explicitly NOT used anywhere
+passive — see the neutral stats-line resolution below. Reader-initiated
+goal-setting guidance ("X pages a day to stay on track," shown only in
+ReadingProgressSheet when actively setting a goal) is fine and stays.
+[SUPERSEDED — see decision 24] The old row-based Today model. Rows moved
+to the Search tab (decision 25). Engine not thrown away, repurposed.
+These rows reuse the existing recommendation engine — same shown-book
+exclusion (8), recency-weighting (9), taste-blending (10). Now serving Search.
+Reliability: backend book-metadata lookups must not let one book's failure
+take down the whole response. [Update] A heavy-exclusion investigation found
+the deeper cause of intermittent failures was max_tokens truncation on harder
+rows — fixed (2000→4096 + a second retry). Known, accepted remaining risk: a
+worst-case row needing all 3 attempts could theoretically approach the 60s
+maxDuration — not observed, not ruled out.
+(intentionally skipped — no content, gap preserved to avoid invalidating other
+decisions' cross-references.)
+[Phase 4 reference — do not act on this yet] A finished brand board exists at
+docs/brand-board.png. This is the intended source of truth for Phase 4's
+visual execution (icon, palette 
+#0F2B22/
+#2E4A3A/
+#F6F1E7/
+#E7DECA/
+#C79A62,
+Playfair Display + Inter, color-coded shelf spines — keep forever=green, glad I
+read it=tan, should've stopped=oxblood/rust, vertically stacked per Walker's
+later note). The board's 5-tab structure has already been substantially adopted
+early (decisions 12/24/25) — Phase 4's remaining job is matching the visual
+execution, not the tab structure. Do not start on this during Phase 3 work.
+[Major Today redesign] Today is a once-daily ritual, not a browsable feed.
+Once per calendar day, exactly 3 curated picks, each a binary want-to-read /
+not-interested decision. If a currently-reading book exists AND today's 3 aren't
+fully decided, show both — hero card on top, undecided picks below. Built and
+working.
+Search tab. Real title/author/ISBN search + the relocated AI row-browsing
+engine. Built and working.
+"Want to read" and "start reading" are always separate, explicit actions.
+"Not interested" is a real but moderate negative signal — lighter than
+"should've stopped," tracked distinctly from shelf placements.
+Profile tab scope, for now: basic reading stats + app settings, intentionally
+minimal.
+[FINAL, as built] Today's header: no "DOGEAR" wordmark. Time-aware greeting
+("Good morning," / "Good afternoon," / "Good evening," — WITH a trailing comma
+when a name follows, no comma when blank) stacked on its own line, with the
+reader's FIRST NAME ONLY on the line below when set. Name source for now: an
+optional "Your name" field in Profile settings. Forward note: once real
+accounts/login exist (future phase, not v1), this manual field gets replaced by
+the real account name.
+My Shelf reorganization: real sections, in order — Currently Reading
+(full list, can be multiple books — distinct from the hero card's single-book
+spotlight on Today), Want to Read (same list Today's "Up Next" previews),
+then the three finished shelves: Keep Forever, Glad I Read It,
+Should've Stopped. Built and verified with real data.
+[Stage 1 spec — planned, NOT yet built] Book detail page — core content and
+behavior. Every entry point (Today, Search, Vibe Search, My Shelf) opens the
+same detail view. Shows: cover, title, author, page count, real synopsis, and
+the AI's personal "why this fits you" verdict (decision 33). Actions depend on
+status: not on shelf → add/want to read; want to read → start reading; reading
+→ update page/view goal; finished → shelf placement, re-placeable. No
+highlights (decision 32). No external reviews (decision 34). A camera/scan
+entry point was considered and explicitly cut — Vibe Search remains the sole
+standout feature by deliberate choice; don't reintroduce scanning without a real
+product conversation first.
+Highlights stay off the detail page. Still in the data model, not surfaced
+here.
+The "why this fits you" verdict: one specific reasoning sentence, same
+quality bar as decision 7. Generated once, cached; regenerate only if the
+reader's finished-book count has changed since generation.
+No external reviews/ratings anywhere on the detail page. Purely personal.
+[Priority pass] Vibe Search AI quality — closing the gap between "plausible"
+and "genuinely great." Real evidence: the same handful of books (Beloved,
+Piranesi, Convenience Store Woman, Norwegian Wood, Housekeeping) recur across
+different queries — the model defaults to a "canon" rather than genuinely
+searching wide. Fix via prompt work: (1) explicit anti-cliché instruction; (2)
+require considering multiple honest interpretations of an ambiguous query before
+committing; (3) reasoning must reference the reader's actual query words, not
+just the general mood category. May cost more time/tokens — approved
+explicitly. Explicitly NOT in scope: visual styling stays on current tokens,
+Phase 4 boundary holds.
 Design identity
-Palette: unchanged from the earlier prototype and still the right call — deep
-forest 
+Palette: current placeholder — deep forest 
 #1F3A2E, ink 
-#16241D, linen 
+#16241D, linen
+
 #EFE9D8, brass 
 #C08A3E, rust 
-#9B4B3A.
-Dark backgrounds pair with warm accents — no gradients, no neon.
-Type: serif display (system serif is fine — .system(.title, design: .serif),
+#9B4B3A. Superseded by decision 23's brand
+board palette once Phase 4 starts.
+Type: serif display (system serif, .system(.title, design: .serif),
 italicized for headers) paired with system sans for UI chrome/labels.
-Signature element: the dog-ear fold itself becomes the core interaction —
-press and hold a corner of a book cover and it visually folds down.
-Full CDS-style rules: no more than 2 accent colors on screen at once, sentence case
-everywhere, no filler copy ("simply", "just", "seamlessly").
-Screens (current — 5-tab architecture per decisions 12, 24, 25, 28)
+Signature element: the dog-ear fold — press and hold a book cover to fold its
+corner down as the save/bookmark gesture. Not yet built (Phase 4).
+No pace-pressure or ambient judgment language anywhere passive (decision 18) —
+calm, factual information only, unless the reader actively asked (e.g. goal-setting
+guidance).
+No more than 2 accent colors on screen at once, sentence case everywhere, no
+filler copy.
+Screens (current — 5-tab architecture)
 Onboarding — pick up to 5 genres, one-time, first launch only.
-Today — once-daily ritual (decision 24): exactly 3 curated picks per day,
-want-to-read / not-interested decision on each. Hero "Currently Reading" status
-card (decision 17/18) shows alongside undecided daily picks, or alone once
-they're decided. No manual refresh control — fixed daily cadence, not a
-browsable feed.
-Search (decision 25) — real search by title/author/ISBN, plus AI-personalized
-discovery rows (relocated here from Today).
-Find (Vibe Search) — free-text mood/vibe search (decisions 10, 13, 14).
-Shelf — three shelves (keep forever / glad I read it / should've stopped),
-each a row of spines. Tap a spine → detail sheet with the AI "why you liked it"
-note + any highlights.
-Profile (decision 28) — basic reading stats + app settings.
-
-Vault (a separate highlights/quotes screen) isn't part of the current 5-tab
-architecture — highlights still exist on the data model and surface within book
-detail views; a dedicated Vault tab isn't currently planned.
-
+Today — once-daily ritual (24): 3 curated picks, want-to-read/not-interested.
+Hero card (17/18) + Up Next preview of want-to-read (once picks decided) +
+midpoint check-in card when due.
+Search (25) — real title/author/ISBN search + AI-personalized discovery rows.
+Find (Vibe Search) — free-text mood search (10, 13, 14, 35).
+Shelf (30) — Currently Reading, Want to Read, then the three finished
+shelves.
+Profile (28) — basic stats + settings (including the name field, decision 29).
 What NOT to build in v1
 No social features.
-No account system / login — local-first, single user, no backend user table.
-No remote/server push notifications. (Midpoint check-in's local notification is fine.)
+No account system / login (decision 29's forward note records the future intent).
+No remote/server push notifications (the midpoint check-in's local notification is fine).
 No in-app purchases / monetization.
-No star ratings, no thumbs, no numeric score of any kind — see decision #2.
+No star ratings, no thumbs, no numeric score of any kind.
+No camera/scan-based book identification (decision 31 — explicitly considered and cut).
 Working agreement for this project
 Optimize for a working app on a real device, not architectural purity.
 When in doubt between "more features" and "polish what exists," polish.
 Every AI-generated string must degrade gracefully — clear retry state, never a
 blank screen or crash.
-- Keep `backend/` and `ios/` as separate concerns; the iOS app should only ever know
-  about its Vercel endpoint URLs, nothing about Anthropic or Google Books directly.
+Keep backend/ and ios/ as separate concerns; the iOS app should only ever know
+about its Vercel endpoint URLs, nothing about Anthropic or Google Books directly.
+Big visual/architectural pivots get a real planning conversation and a locked spec
+before any code — no same-session "I saw this, let's redo that" jumps, even when
+the inspiration is good.
