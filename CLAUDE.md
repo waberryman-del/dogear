@@ -254,14 +254,18 @@ current streak or similar) plus app settings. Real content, not a
 placeholder, but intentionally minimal.
 29. **Today's header**: no "DOGEAR" wordmark needed at the top — just the
     time-aware greeting ("Good morning" / "Good afternoon" / "Good
-    evening"), optionally followed by the reader's first name if set, in a
-    larger, more prominent type size than currently shown. Name source for
-    now: a simple optional "Your name" field in Profile settings (plain
-    text, no validation needed) — if blank, greeting has no name, just the
-    time-of-day phrase. **Forward note, not to act on now**: once real
-    accounts/login exist (a future phase, explicitly not v1 — see "What NOT
-    to build in v1"), this manual field should be replaced by the real
-    account name. Record this intent so it isn't lost, don't build login now.
+    evening"), in a larger, more prominent type size than previously shown.
+    **[AMENDED — final behavior]** If the reader has set a name, only their
+    first name is shown (a stored "Walker Berryman" greets as "Walker," not
+    the full string), and it stacks on its own line below the greeting —
+    not "Good evening, Walker" on one line, but "Good evening" / "Walker"
+    on two. Name source for now: a simple optional "Your name" field in
+    Profile settings (plain text, no validation needed) — if blank, no
+    second line at all, just the time-of-day phrase alone. **Forward note,
+    not to act on now**: once real accounts/login exist (a future phase,
+    explicitly not v1 — see "What NOT to build in v1"), this manual field
+    should be replaced by the real account name. Record this intent so it
+    isn't lost, don't build login now.
 30. **My Shelf reorganization**: no longer a flat grid of everything. Real
     sections, in order: **Currently Reading** (a real list — can be more
     than one book; this is separate from the hero card's single-book
