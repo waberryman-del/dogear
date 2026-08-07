@@ -6,3 +6,5 @@ ios/DerivedData/
 ios/*.xcresult
 backend/node_modules/
 backend/.vercel/
+.vercel
+.env*

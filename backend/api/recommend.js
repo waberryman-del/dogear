@@ -151,7 +151,20 @@ async function generateRow(assignment, historyText) {
   const claudeStart = Date.now();
   const msg = await anthropic.messages.create({
     model: "claude-sonnet-5",
-    max_tokens: 2000,
+    // CONFIRMED root cause (reproduced twice against production, 2026-08-06,
+    // 60-book shown_books list): the secondary-taste/discovery rows — which
+    // have to justify picks against a much larger exclusion list than the
+    // primary row — repeatedly came back as JSON.parse failures at a
+    // *different* byte offset every single run (2073, 362, then 700 on a
+    // second run), never the same defect twice. That pattern is the
+    // signature of the response getting cut off mid-generation, not a
+    // recurring formatting bug — this codebase hit the exact same
+    // max_tokens-truncation failure mode once before, at the old
+    // single-call multi-row architecture (see git history: "bump max_tokens
+    // to 4096, was truncating multi-row JSON response"). 2000 was sized for
+    // the easy case; raised to 4096 (matching that prior known-good value)
+    // so a harder row with longer per-book reasoning has real headroom.
+    max_tokens: 4096,
     system: BASE_SYSTEM_PROMPT,
     messages: [{ role: "user", content: userContent }],
   });
@@ -271,51 +284,60 @@ function backfillFromShownBooks(currentResults, shownBooks, shelvedBooks, readHi
   return backfilled;
 }
 
+// Up to 2 retries (3 total attempts) before giving up to backfill. Originally
+// 1 retry — CONFIRMED against production (2026-08-06, 60-book shown_books
+// list, 2 separate runs) that a single retry still wasn't enough: the
+// secondary-taste/discovery rows sometimes failed (parse error or a genuine
+// 0-book response) on *both* the first attempt and the one retry, in both
+// runs, landing on the hardcoded "More you might like" fallback with the row
+// 100% backfilled — real AI reasoning completely absent from 2 of 3 rows.
+// The max_tokens bump above (2000 -> 4096) addresses the likely root cause
+// (mid-generation truncation), but this second retry is the safety net for
+// whatever's left over — a genuine scarcity case Claude needs a second
+// broadened attempt to recover from, not a truncation artifact.
+const MAX_ROW_ATTEMPTS = 3;
+
 async function generateRowWithRetry(assignment, historyText, shownBooks, shelvedBooks, readHistory, usedBackfillKeys) {
-  // CONFIRMED root cause (reproduced against production: 12 titles of
-  // shown_books + read_history produced only 1 of 3 rows). Same bug as
-  // vibe-search.js: the first attempt here was never wrapped in try/catch —
-  // only the retry call was — so a row whose first Claude call threw (a
-  // parse failure, not just a low count) got zero retry and was dropped via
-  // Promise.allSettled's rejection path in the handler below. A row that
-  // came back with too few books DID retry; a row that came back unparseable
-  // did not. Both are now covered the same way.
+  // Same bug as vibe-search.js originally had: every attempt must be
+  // individually try/caught — a thrown parse error on any attempt, not just
+  // a low count, has to still let the next attempt run rather than dropping
+  // the row via Promise.allSettled's rejection path in the handler below.
   const retryAssignment = {
     ...assignment,
     instruction: assignment.instruction + BROADEN_RETRY_HINT,
   };
 
-  let first;
-  try {
-    first = await generateRow(assignment, historyText);
-  } catch (err) {
-    console.error(
-      `Row (${assignment.kind}) first attempt threw, retrying with a broadened prompt:`,
-      err?.message
-    );
-    first = null;
-  }
+  let best = null;
+  for (let attempt = 0; attempt < MAX_ROW_ATTEMPTS; attempt++) {
+    const isFirst = attempt === 0;
+    let outcome;
+    try {
+      outcome = await generateRow(isFirst ? assignment : retryAssignment, historyText);
+    } catch (err) {
+      console.error(
+        `Row (${assignment.kind}) ${isFirst ? "first attempt" : `retry ${attempt}`} threw:`,
+        err?.message
+      );
+      outcome = null;
+    }
 
-  let result;
-  if (first && first.recommendations.length >= MIN_BOOKS_PER_ROW) {
-    result = first;
-  } else {
-    if (first) {
+    if (outcome && (!best || outcome.recommendations.length > best.recommendations.length)) {
+      best = outcome;
+    }
+
+    if (best && best.recommendations.length >= MIN_BOOKS_PER_ROW) break;
+
+    const attemptsLeft = MAX_ROW_ATTEMPTS - attempt - 1;
+    if (attemptsLeft > 0) {
       console.log(
-        `Row (${assignment.kind}) returned ${first.recommendations.length} books on the ` +
-        `first attempt, retrying with a broadened prompt`
+        `Row (${assignment.kind}) has ${best?.recommendations.length ?? 0} books after ` +
+        `${isFirst ? "the first attempt" : `retry ${attempt}`}, retrying with a broadened prompt ` +
+        `(${attemptsLeft} attempt(s) left)`
       );
     }
-    try {
-      const retry = await generateRow(retryAssignment, historyText);
-      // Keep whichever attempt did better — the retry is meant to recover,
-      // not to unconditionally replace a first attempt that was already fine.
-      result = (!first || retry.recommendations.length > first.recommendations.length) ? retry : first;
-    } catch (err) {
-      console.error(`Retry for row (${assignment.kind}) failed:`, err?.message);
-      result = first ?? { kind: assignment.kind, label: "More you might like", recommendations: [], claudeMs: 0 };
-    }
   }
+
+  let result = best ?? { kind: assignment.kind, label: "More you might like", recommendations: [], claudeMs: 0 };
 
   if (result.recommendations.length < MIN_BOOKS_PER_ROW) {
     const needed = MIN_BOOKS_PER_ROW - result.recommendations.length;
