@@ -443,7 +443,16 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       endpoint, no new AI call — this is a third field on the existing
       response, cached the same way as verdict/recognition (decision 33).
       This becomes the synopsis shown in decision 39.5, not the raw source
-      text.
+      text. **[Update after real testing] Explicitly forbid drawing on
+      background/outside knowledge beyond the provided source text when
+      generating the synopsis** — real testing showed the model filling
+      gaps in thin sources using its own training knowledge of the actual
+      book (accurate for well-known titles, but an unverifiable
+      hallucination risk for obscure ones with nothing to catch it). Source-
+      text-only, even if that means a genuinely short synopsis on thin
+      books — same standard already applied to Recognition, now applied
+      here too. A short, honest synopsis is correct behavior on a thin
+      source, not a shortcoming to engineer around.
     - **Correct book matching**: across all 4 `lookupBook()` implementations
       (`recommend.js`, `vibe-search.js`, `daily-picks.js`, `book-search.js`),
       filter out or deprioritize matches whose title/category signals a

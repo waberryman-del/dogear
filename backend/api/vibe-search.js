@@ -156,13 +156,18 @@ loosen. Return 5-6 books.`;
 // max_tokens under the combined complexity of a long exclusion list plus
 // refinement blending) skipped the retry entirely and failed the whole
 // request immediately. extractJSON + the try/catch fix below address both
-// the immediate cause and the underlying trigger.
+// the immediate cause and the underlying trigger. Also strips trailing
+// commas before a closing brace/bracket — proactive fix (CLAUDE.md decision
+// #40): live testing of book-verdict.js's copy of this same helper caught
+// Claude leaving a trailing comma after its last field, which fails strict
+// JSON.parse outright. Same shared pattern here, so applied here too rather
+// than waiting to independently rediscover it in this file.
 function extractJSON(raw) {
   const trimmed = raw.trim();
   const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");
   if (start === -1 || end === -1 || end < start) return trimmed;
-  return trimmed.slice(start, end + 1);
+  return trimmed.slice(start, end + 1).replace(/,(\s*[}\]])/g, "$1");
 }
 
 async function generateResults(userContent, systemPrompt) {

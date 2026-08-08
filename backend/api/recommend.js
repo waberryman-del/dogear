@@ -137,13 +137,18 @@ explicitly as something different, e.g. "Something a little different tonight."`
 
 // See vibe-search.js for the fuller rationale — protects against Claude
 // occasionally prefacing the JSON with commentary despite being told not to,
-// which otherwise breaks a strict JSON.parse.
+// which otherwise breaks a strict JSON.parse. Also strips trailing commas
+// before a closing brace/bracket — proactive fix (CLAUDE.md decision #40):
+// live testing of book-verdict.js's copy of this same helper caught Claude
+// leaving a trailing comma after its last field, which fails strict
+// JSON.parse outright. Same shared pattern here, so applied here too rather
+// than waiting to independently rediscover it in this file.
 function extractJSON(raw) {
   const trimmed = raw.trim();
   const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");
   if (start === -1 || end === -1 || end < start) return trimmed;
-  return trimmed.slice(start, end + 1);
+  return trimmed.slice(start, end + 1).replace(/,(\s*[}\]])/g, "$1");
 }
 
 async function generateRow(assignment, historyText) {

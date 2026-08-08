@@ -64,19 +64,44 @@ average if the reader's taste is visibly shifting.
    Pulitzer fiction category) is not evidence of anything — just leave recognition null,
    don't reach for a weaker substitute claim to fill the space.
 
-3. A "synopsis" — a clean, readable synopsis of the book itself (2-4 sentences), not
-   personal to the reader. The raw description text you're given (sourced from Google
+3. A "synopsis" — a clean, readable synopsis of the book itself, not personal to the
+   reader. Target length: 3-4 sentences, roughly 60-90 words — consistent enough that
+   every book's detail page feels like it belongs to the same app, not wildly varying
+   in length book to book. The raw description text you're given (sourced from Google
    Books or Open Library) is frequently messy: marketing copy ("An instant #1
    bestseller!"), plain-text award badges ("PULITZER PRIZE WINNER"), leftover HTML
    fragments, or pull-quote review blurbs standing in for an actual description.
    Rewrite it into calm, plain prose describing what the book is actually about — strip
    marketing language, HTML, review quotes, and all-caps award callouts (recognition
-   facts belong in the "recognition" field above, not repeated here). Never invent
-   specific plot events, characters, or details that aren't evidenced in the source
-   text. If the source summary is null, empty, or too thin to work with, write a short,
-   honest synopsis grounded only in the book's title/author/genre rather than
-   fabricating plot — and if you genuinely have nothing to go on, an empty string is
-   correct and expected, not a failure.
+   facts belong in the "recognition" field above, not repeated here).
+   Source text only — same standard already locked for Recognition, now applied here
+   too: base the synopsis SOLELY on the raw description text provided (plus the book's
+   own title/author/genre for framing). Do NOT draw on any background or outside
+   knowledge you may separately have about this book from training — even if you
+   recognize the title and know accurate plot details, style, structure, or narrative
+   voice, do not add anything that isn't actually evidenced in the source text given to
+   you. This applies even when the added detail would be true — the risk being guarded
+   against is that for an obscure book you don't actually know, the same move produces
+   an unverifiable, confidently-stated hallucination with nothing in the request to
+   catch it, so the rule has to be "source text only," not "only add true things."
+   Self-check before answering: for every sentence you're about to write, point to the
+   specific words or phrases in the provided source text that it restates or closely
+   paraphrases. If a sentence names a narrative technique, point of view, structure,
+   format, setting detail, or any other specific fact that ISN'T actually named in that
+   source text, delete that sentence — that kind of added specificity is exactly the
+   signature of background knowledge leaking in rather than the source, even when it's
+   true. Concretely: if the source text is one short sentence like "A group of friends
+   navigate loss and memory in a small coastal town," a compliant synopsis stays at
+   that same level of detail — it does NOT add the number of characters, their names,
+   the narrative point of view, or thematic analysis, even if you happen to know all of
+   that about the real book. Write 1-2 sentences reflecting exactly what's given, then
+   stop, rather than layering in unsourced specifics to reach the target length.
+   If the raw description is too sparse to responsibly reach 60-90 words on its own,
+   write a shorter, accurate synopsis instead rather than padding it out with anything
+   not in that text. If you genuinely have nothing to go on at all, an empty string is
+   correct and expected, not a failure. A short honest synopsis grounded only in the
+   source text always beats a longer one that reaches beyond it — a thin synopsis is
+   correct behavior on a thin source, not a shortcoming to engineer around.
 
 Return ONLY valid JSON matching this exact shape, nothing else — no markdown fences,
 no preamble:
@@ -88,12 +113,20 @@ no preamble:
 
 // See vibe-search.js for the fuller rationale — protects against Claude
 // occasionally prefacing the JSON with commentary despite being told not to.
+// Also strips trailing commas before a closing brace/bracket — observed live
+// while testing decision #40's synopsis field: with three fields to close
+// out instead of two, Claude occasionally left a trailing comma after the
+// last one (valid in JS, not in strict JSON), which failed JSON.parse
+// outright and threw away an otherwise well-formed response. Applied to
+// recommend.js/vibe-search.js's copies of this same helper too, proactively
+// — same latent risk, same shared pattern, no reason to wait for a third
+// occurrence of this exact bug class in a sibling file.
 function extractJSON(raw) {
   const trimmed = raw.trim();
   const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");
   if (start === -1 || end === -1 || end < start) return trimmed;
-  return trimmed.slice(start, end + 1);
+  return trimmed.slice(start, end + 1).replace(/,(\s*[}\]])/g, "$1");
 }
 
 export default async function handler(req, res) {
