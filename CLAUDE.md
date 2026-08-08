@@ -432,10 +432,18 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       synopsis — rewriting whatever raw description came from Google
       Books/Open Library (which often contains marketing copy, embedded
       award badges as plain text, HTML fragments, or review quotes) into
-      2-4 clean, readable sentences. No new endpoint, no new AI call — this
-      is a third field on the existing response, cached the same way as
-      verdict/recognition (decision 33). This becomes the synopsis shown
-      in decision 39.5, not the raw source text.
+      clean, readable prose. **Target length: 3-4 sentences, roughly
+      60-90 words** — consistent enough that every book's detail page
+      feels like it belongs to the same app, not wildly varying in length
+      book to book. **Honesty over consistency when source material is
+      thin**: if the raw description is too sparse to responsibly hit the
+      target length, produce a shorter, accurate synopsis rather than
+      inventing plot details not evidenced in the source — same
+      "never fabricate" principle already locked for Recognition. No new
+      endpoint, no new AI call — this is a third field on the existing
+      response, cached the same way as verdict/recognition (decision 33).
+      This becomes the synopsis shown in decision 39.5, not the raw source
+      text.
     - **Correct book matching**: across all 4 `lookupBook()` implementations
       (`recommend.js`, `vibe-search.js`, `daily-picks.js`, `book-search.js`),
       filter out or deprioritize matches whose title/category signals a
