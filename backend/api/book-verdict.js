@@ -5,7 +5,7 @@
 //   read_history: [{ title, author, genres, shelf_placement, why_liked }]?,  // most-recent-first
 //   currently_reading: [{ title, still_enjoying_midpoint }]?                 // most-recent-first
 // }
-// Returns { verdict: "string", recognition: "string" | null }
+// Returns { verdict: "string", recognition: "string" | null, synopsis: "string" }
 //
 // Deploy target: Vercel. Runtime: Node.js serverless function.
 // Env var required: ANTHROPIC_API_KEY (set in Vercel project settings, never in code).
@@ -17,15 +17,18 @@
 // second AI call. When a reason already exists, the client uses this
 // response's `verdict` field for nothing and keeps its own reason — only
 // `recognition` gets used. When no reason exists (Search's manual title/
-// author/ISBN lookup), both fields are used. Client-side caching (decision
-// #33) applies to whichever fields actually get used, keyed on the reader's
-// finished-book count, so this call only happens once per book in practice.
+// author/ISBN lookup), both fields are used. `synopsis` (decision #40) is
+// always used regardless of whether a prior reason exists — it isn't
+// produced by any other entry point, so this is its only source. Client-side
+// caching (decision #33) applies to whichever fields actually get used,
+// keyed on the reader's finished-book count, so this call only happens once
+// per book in practice.
 
 import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const SYSTEM_PROMPT = `You write two things for Dogear's book detail page, about ONE
+const SYSTEM_PROMPT = `You write three things for Dogear's book detail page, about ONE
 specific book, for ONE specific reader:
 
 1. A "verdict" — one specific sentence, written directly to the reader ("you"), on why
@@ -56,13 +59,31 @@ average if the reader's taste is visibly shifting.
    mentions a prize, a bestseller status, a film adaptation, "the first novel to...").
    NEVER invent or infer an award or accolade that isn't actually there in the text.
    If the summary contains nothing like this, return null for recognition — an absent
-   section is correct and expected for most books, not a failure.
+   section is correct and expected for most books, not a failure. A book being old
+   enough to predate a prize that didn't exist yet (e.g. a 1920s novel and the modern
+   Pulitzer fiction category) is not evidence of anything — just leave recognition null,
+   don't reach for a weaker substitute claim to fill the space.
+
+3. A "synopsis" — a clean, readable synopsis of the book itself (2-4 sentences), not
+   personal to the reader. The raw description text you're given (sourced from Google
+   Books or Open Library) is frequently messy: marketing copy ("An instant #1
+   bestseller!"), plain-text award badges ("PULITZER PRIZE WINNER"), leftover HTML
+   fragments, or pull-quote review blurbs standing in for an actual description.
+   Rewrite it into calm, plain prose describing what the book is actually about — strip
+   marketing language, HTML, review quotes, and all-caps award callouts (recognition
+   facts belong in the "recognition" field above, not repeated here). Never invent
+   specific plot events, characters, or details that aren't evidenced in the source
+   text. If the source summary is null, empty, or too thin to work with, write a short,
+   honest synopsis grounded only in the book's title/author/genre rather than
+   fabricating plot — and if you genuinely have nothing to go on, an empty string is
+   correct and expected, not a failure.
 
 Return ONLY valid JSON matching this exact shape, nothing else — no markdown fences,
 no preamble:
 {
   "verdict": "string",
-  "recognition": "string or null"
+  "recognition": "string or null",
+  "synopsis": "string"
 }`;
 
 // See vibe-search.js for the fuller rationale — protects against Claude
@@ -108,7 +129,11 @@ export default async function handler(req, res) {
   try {
     const msg = await anthropic.messages.create({
       model: "claude-sonnet-5",
-      max_tokens: 600,
+      // Decision #40 added a third field (synopsis) to this call. Decision
+      // #35 already hit max_tokens truncation twice on other endpoints when
+      // output grew — bumped from 600 to leave real headroom rather than
+      // wait to discover truncation via a bad response.
+      max_tokens: 1000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userContent }],
     });
@@ -125,6 +150,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       verdict: parsed.verdict ?? "",
       recognition: parsed.recognition ?? null,
+      synopsis: parsed.synopsis ?? "",
     });
   } catch (err) {
     console.error("book-verdict error:", err);

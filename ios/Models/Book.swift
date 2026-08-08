@@ -68,6 +68,10 @@ struct LibraryEntry: Identifiable, Codable, Equatable {
     // (a cheap proxy for "taste profile changed") no longer matches.
     var cachedVerdict: String? = nil
     var cachedRecognition: String? = nil
+    // Decision #40: the cleaned synopsis from the same book-verdict.js call,
+    // replacing raw source text as the Synopsis section's content. Cached
+    // and invalidated the same way as the other two fields.
+    var cachedSynopsis: String? = nil
     var verdictCachedAtFinishedCount: Int? = nil
 }
 

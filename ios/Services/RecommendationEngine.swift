@@ -293,9 +293,12 @@ struct VibeSearchResult {
 
 /// Stage 1: `book-verdict.js`'s response. Not `private` — `LibraryStore`
 /// (decision #37's reuse-or-fetch orchestration) consumes this directly.
+/// `synopsis` (decision #40) is always used regardless of whether `verdict`
+/// is discarded in favor of an existing reason — it has no other source.
 struct BookVerdictResponse: Codable {
     let verdict: String
     let recognition: String?
+    let synopsis: String
 }
 
 private struct RecommendationResponse: Codable {

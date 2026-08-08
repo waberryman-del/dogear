@@ -60,7 +60,7 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
     /// reader never added was never going to need the verdict again anyway.
     /// Promoted into the persisted `LibraryEntry` fields the moment a book
     /// this covers gets added to the shelf (see `addToShelf`).
-    private var sessionVerdictCache: [String: (verdict: String?, recognition: String?)] = [:]
+    private var sessionVerdictCache: [String: (verdict: String?, recognition: String?, synopsis: String?)] = [:]
 
     private let recEngine = RecommendationEngine()
     private let defaults = UserDefaults.standard
@@ -179,6 +179,7 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
             aiWhyYouLikedIt: nil, midpointCheckIn: nil, highlights: [],
             cachedVerdict: reason ?? sessionCached?.verdict,
             cachedRecognition: sessionCached?.recognition,
+            cachedSynopsis: sessionCached?.synopsis,
             verdictCachedAtFinishedCount: sessionCached != nil ? finishedBookCount : nil
         ))
         sessionVerdictCache.removeValue(forKey: book.id)
@@ -332,32 +333,41 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
         entries.filter { $0.status == .finished }.count
     }
 
-    /// Resolves the detail page's verdict + recognition for one book,
-    /// following decision #37 (amended) and #39.4: `book-verdict.js` runs
-    /// once per book — used for both fields when no `existingReason` was
-    /// passed in from the entry point, used only for `recognition` when one
-    /// was (the verdict field of the response is discarded in that case,
-    /// `existingReason` wins). Cached afterward per decision #33: on the
-    /// matching `LibraryEntry` if the book is on the shelf, in
-    /// `sessionVerdictCache` otherwise. Returns `(nil, nil)` verdict/
-    /// recognition only if the network call itself fails — the caller
-    /// decides how to degrade (decision #36: never hold up the rest of the
-    /// page on this).
+    /// Resolves the detail page's verdict + recognition + synopsis for one
+    /// book, following decision #37 (amended), #39.4, and #40: `book-verdict.js`
+    /// runs once per book — used for all three fields when no `existingReason`
+    /// was passed in from the entry point, used for `recognition` and
+    /// `synopsis` only when one was (the verdict field of the response is
+    /// discarded in that case, `existingReason` wins — `synopsis` has no
+    /// other source, so it's always used regardless). Cached afterward per
+    /// decision #33: on the matching `LibraryEntry` if the book is on the
+    /// shelf, in `sessionVerdictCache` otherwise.
+    ///
+    /// Cache validity is keyed on `cachedVerdict` + `verdictCachedAtFinishedCount`
+    /// alone, NOT on `cachedRecognition`/`cachedSynopsis` being non-nil —
+    /// recognition is legitimately absent for most books (decision #39.4,
+    /// best-effort) and synopsis can legitimately be empty (decision #40), so
+    /// requiring either to be non-nil/non-empty would make the cache
+    /// permanently invalid for the common case and silently re-fetch on every
+    /// detail-page visit.
+    ///
+    /// Returns `(nil, nil, nil)` verdict/recognition/synopsis only if the
+    /// network call itself fails — the caller decides how to degrade
+    /// (decision #36: never hold up the rest of the page on this).
     func verdictAndRecognition(
         for book: Book, existingReason: String?
-    ) async -> (verdict: String?, recognition: String?) {
+    ) async -> (verdict: String?, recognition: String?, synopsis: String?) {
         let shelfIndex = entries.firstIndex { $0.book.id == book.id }
         let currentCount = finishedBookCount
 
         if let idx = shelfIndex {
             let entry = entries[idx]
             let cacheValid = entry.verdictCachedAtFinishedCount == currentCount
-                && entry.cachedVerdict != nil && entry.cachedRecognition != nil
+                && entry.cachedVerdict != nil
             if cacheValid {
-                return (entry.cachedVerdict, entry.cachedRecognition)
+                return (entry.cachedVerdict, entry.cachedRecognition, entry.cachedSynopsis)
             }
-        } else if let cached = sessionVerdictCache[book.id],
-                  cached.verdict != nil, cached.recognition != nil {
+        } else if let cached = sessionVerdictCache[book.id], cached.verdict != nil {
             return cached
         }
 
@@ -366,23 +376,25 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
         ) else {
             // Degrade to whatever we already had (an existing reason still
             // counts as a perfectly good verdict) rather than surfacing
-            // nothing just because the recognition half failed to load.
-            return (existingReason, nil)
+            // nothing just because the recognition/synopsis half failed to load.
+            return (existingReason, nil, nil)
         }
 
         let verdict = existingReason ?? response.verdict
         let recognition = response.recognition
+        let synopsis = response.synopsis
 
         if let idx = shelfIndex {
             entries[idx].cachedVerdict = verdict
             entries[idx].cachedRecognition = recognition
+            entries[idx].cachedSynopsis = synopsis
             entries[idx].verdictCachedAtFinishedCount = currentCount
             persistEntries()
         } else {
-            sessionVerdictCache[book.id] = (verdict, recognition)
+            sessionVerdictCache[book.id] = (verdict, recognition, synopsis)
         }
 
-        return (verdict, recognition)
+        return (verdict, recognition, synopsis)
     }
 
     // MARK: - Finishing a book — shelf placement IS the rating

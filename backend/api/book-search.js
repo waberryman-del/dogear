@@ -63,6 +63,25 @@ function parsePublicationYear(publishedDate) {
   return match ? parseInt(match[0], 10) : null;
 }
 
+// CLAUDE.md decision #40: same bundle/study-guide filter as recommend.js/
+// vibe-search.js/daily-picks.js's lookupBook() — but here there's no single
+// "best match" to fall back through, just a results list shown directly to
+// the reader for manual search, so bad matches are dropped from the list
+// outright rather than deprioritized behind a fallback query.
+const BUNDLE_OR_GUIDE_PATTERNS = [
+  /study guide/i,
+  /summary (?:and analysis )?of\b/i,
+  /companion (?:to|guide)/i,
+  /box(?:ed)? set/i,
+  /set of \d+ books?/i,
+  /\bcollection\b/i,
+];
+
+function isBundleOrGuideMatch(title, categories) {
+  const haystack = [title, ...(categories ?? [])].filter(Boolean).join(" ");
+  return BUNDLE_OR_GUIDE_PATTERNS.some((re) => re.test(haystack));
+}
+
 async function searchGoogleBooks(query) {
   const key = process.env.GOOGLE_BOOKS_API_KEY;
   const keyParam = key ? `&key=${key}` : "";
@@ -76,19 +95,21 @@ async function searchGoogleBooks(query) {
       console.error("Google Books search error for query:", query, JSON.stringify(data.error));
       return [];
     }
-    return (data.items ?? []).map((item) => {
-      const info = item.volumeInfo ?? {};
-      return {
-        id: item.id,
-        title: info.title ?? query,
-        author: info.authors?.[0] ?? "Unknown",
-        coverURL: info.imageLinks?.thumbnail?.replace(/^http:/, "https:") ?? null,
-        pageCount: info.pageCount ?? null,
-        genres: info.categories ?? [],
-        summary: info.description ?? null,
-        publicationYear: parsePublicationYear(info.publishedDate),
-      };
-    });
+    return (data.items ?? [])
+      .filter((item) => !isBundleOrGuideMatch(item.volumeInfo?.title, item.volumeInfo?.categories))
+      .map((item) => {
+        const info = item.volumeInfo ?? {};
+        return {
+          id: item.id,
+          title: info.title ?? query,
+          author: info.authors?.[0] ?? "Unknown",
+          coverURL: info.imageLinks?.thumbnail?.replace(/^http:/, "https:") ?? null,
+          pageCount: info.pageCount ?? null,
+          genres: info.categories ?? [],
+          summary: info.description ?? null,
+          publicationYear: parsePublicationYear(info.publishedDate),
+        };
+      });
   } catch (err) {
     console.error("Google Books search fetch failed:", query, err?.message);
     return [];
@@ -102,16 +123,18 @@ async function searchOpenLibrary(query) {
       `https://openlibrary.org/search.json?q=${q}&limit=${MAX_RESULTS}`
     );
     const data = await resp.json();
-    return (data.docs ?? []).map((doc) => ({
-      id: doc.key ?? `${doc.title}-${doc.author_name?.[0] ?? "unknown"}`.replace(/\s+/g, "-").toLowerCase(),
-      title: doc.title ?? query,
-      author: doc.author_name?.[0] ?? "Unknown",
-      coverURL: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
-      pageCount: doc.number_of_pages_median ?? null,
-      genres: doc.subject?.slice(0, 3) ?? [],
-      summary: null,
-      publicationYear: doc.first_publish_year ?? null,
-    }));
+    return (data.docs ?? [])
+      .filter((doc) => !isBundleOrGuideMatch(doc.title, doc.subject))
+      .map((doc) => ({
+        id: doc.key ?? `${doc.title}-${doc.author_name?.[0] ?? "unknown"}`.replace(/\s+/g, "-").toLowerCase(),
+        title: doc.title ?? query,
+        author: doc.author_name?.[0] ?? "Unknown",
+        coverURL: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
+        pageCount: doc.number_of_pages_median ?? null,
+        genres: doc.subject?.slice(0, 3) ?? [],
+        summary: null,
+        publicationYear: doc.first_publish_year ?? null,
+      }));
   } catch (err) {
     console.error("Open Library search failed:", query, err?.message);
     return [];

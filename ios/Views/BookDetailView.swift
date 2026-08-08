@@ -14,6 +14,11 @@ struct BookDetailView: View {
 
     @State private var verdict: String?
     @State private var recognition: String?
+    // Decision #40: the cleaned synopsis comes from the same call as verdict/
+    // recognition. Per decision #36, this never gets its own loading state —
+    // `book.summary` (raw source text) renders here immediately, then this
+    // silently swaps in once the call resolves (see `synopsisSection`).
+    @State private var synopsis: String?
     @State private var isLoadingVerdict: Bool
     @State private var showingProgressSheet = false
     @State private var showingPlacementPicker = false
@@ -59,6 +64,7 @@ struct BookDetailView: View {
             let result = await library.verdictAndRecognition(for: book, existingReason: reason)
             verdict = result.verdict
             recognition = result.recognition
+            synopsis = result.synopsis
             isLoadingVerdict = false
         }
         .confirmationDialog(
@@ -185,16 +191,28 @@ struct BookDetailView: View {
         }
     }
 
-    // MARK: - 5. Synopsis (decision #38 fallback)
+    // MARK: - 5. Synopsis (decision #38 fallback, decision #40 cleanup)
+
+    /// Decision #40: the AI-cleaned synopsis replaces raw source text once
+    /// it's available. Per decision #36 this section never blocks on that
+    /// call — `book.summary` (the raw, possibly-messy source text) renders
+    /// immediately and this silently upgrades to the cleaned version in
+    /// place when the call resolves. Decision #38's fallback line only shows
+    /// when neither is available.
+    private var synopsisText: String? {
+        if let synopsis, !synopsis.isEmpty { return synopsis }
+        if let summary = book.summary, !summary.isEmpty { return summary }
+        return nil
+    }
 
     private var synopsisSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("SYNOPSIS")
                 .font(DogearType.caption).tracking(1.5)
                 .foregroundStyle(DogearColor.brass)
-            Text(book.summary?.isEmpty == false ? book.summary! : "No synopsis available for this edition.")
+            Text(synopsisText ?? "No synopsis available for this edition.")
                 .font(DogearType.body)
-                .foregroundStyle(book.summary?.isEmpty == false ? DogearColor.ink : DogearColor.mutedInk)
+                .foregroundStyle(synopsisText != nil ? DogearColor.ink : DogearColor.mutedInk)
         }
     }
 

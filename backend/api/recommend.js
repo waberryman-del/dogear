@@ -520,6 +520,26 @@ function parsePublicationYear(publishedDate) {
   return match ? parseInt(match[0], 10) : null;
 }
 
+// CLAUDE.md decision #40: reject matches that are a study guide, summary,
+// companion volume, or box set/bundle rather than the actual book — the
+// exact bug already observed in production (a Cixin Liu box-set bundle
+// surfacing instead of the single novel being recommended). Checked against
+// both title and category/subject text, since some study guides categorize
+// themselves under "Study Aids" without the phrase appearing in the title.
+const BUNDLE_OR_GUIDE_PATTERNS = [
+  /study guide/i,
+  /summary (?:and analysis )?of\b/i,
+  /companion (?:to|guide)/i,
+  /box(?:ed)? set/i,
+  /set of \d+ books?/i,
+  /\bcollection\b/i,
+];
+
+function isBundleOrGuideMatch(title, categories) {
+  const haystack = [title, ...(categories ?? [])].filter(Boolean).join(" ");
+  return BUNDLE_OR_GUIDE_PATTERNS.some((re) => re.test(haystack));
+}
+
 async function lookupBook(title, author) {
   const key = process.env.GOOGLE_BOOKS_API_KEY;
   const keyParam = key ? `&key=${key}` : "";
@@ -556,10 +576,15 @@ async function lookupOpenLibrary(title, author) {
   try {
     const q = encodeURIComponent(`${title} ${author}`);
     const resp = await fetch(
-      `https://openlibrary.org/search.json?q=${q}&limit=1`
+      `https://openlibrary.org/search.json?q=${q}&limit=5`
     );
     const data = await resp.json();
-    const doc = data.docs?.[0];
+    const docs = data.docs ?? [];
+    // Decision #40: same bundle/study-guide filter as the Google Books path
+    // above. Open Library is the last-resort source here, so if every
+    // candidate looks like a bundle, fall back to the top result rather than
+    // returning nothing.
+    const doc = docs.find((d) => !isBundleOrGuideMatch(d.title, d.subject)) ?? docs[0];
 
     return {
       id: doc?.key ?? `${title}-${author}`.replace(/\s+/g, "-").toLowerCase(),
@@ -596,7 +621,7 @@ async function lookupOpenLibrary(title, author) {
 // entire recommend() request over a single cover lookup.
 async function tryGoogleBooksQuery(query, keyParam, attempt = 0) {
   const q = encodeURIComponent(query);
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${keyParam}`;
+  const url = `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5${keyParam}`;
   try {
     const resp = await fetch(url);
     const data = await resp.json();
@@ -604,7 +629,12 @@ async function tryGoogleBooksQuery(query, keyParam, attempt = 0) {
       console.error("Google Books error for query:", query, JSON.stringify(data.error));
       return null;
     }
-    return data.items?.[0] ?? null;
+    const items = data.items ?? [];
+    // Decision #40: prefer the first real match over a study guide/box set
+    // that happens to rank first — falls through to null (and eventually
+    // Open Library, or the next query variant) rather than knowingly
+    // returning a bundle.
+    return items.find((item) => !isBundleOrGuideMatch(item.volumeInfo?.title, item.volumeInfo?.categories)) ?? null;
   } catch (err) {
     if (attempt === 0) {
       console.error("Google Books fetch failed, retrying once:", query, err?.message);
