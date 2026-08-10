@@ -510,7 +510,14 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       inflating it further) and target something closer to a normal
       single-line-at-rest text field, not just "smaller than before."
       Current design tokens only, brand board's exact palette is still
-      Phase 4 (decision 23).
+      Phase 4 (decision 23). **[Further correction — real device testing
+      shows the GeometryReader/Spacer centering approach creates too much
+      empty space above and below the prompt bubbles.]** Replace flexible
+      Spacer()-based centering with fixed, modest spacing from the header
+      above and the field below — the bubbles should sit in natural
+      reading flow shortly after the headline, not be mathematically
+      centered in the remaining screen space. Reduce both the gap above
+      the bubble stack and the gap below it before the field.
     - **(d) Verify onboarding genre selection only ever happens once.**
       Per decision 1, this should never re-appear after first launch.
       Confirm `hasCompletedOnboarding` is being read and persisted
