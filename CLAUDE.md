@@ -499,13 +499,24 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
 42. **[Batch — real device findings + new scope, one consolidated pass]**
     - **(a) Vibe Search entry screen layout correction.** "What are you in
       the mood for?" must be the literal topmost element on screen — no
-      header or nav content above it. The 5 rotating prompt bubbles get
-      real vertical spacing between them, positioned in the middle section
-      of the screen, not tightly clustered. The free-text input field
-      shrinks — it's currently oversized — and anchors at the bottom.
+      header or nav content above it. **[Corrected after real-device
+      screenshot — prior attempt insufficient]** Prompt bubbles need
+      noticeably MORE vertical spacing than the previous 16pt attempt —
+      target roughly 24-32pt between bubbles, positioned in the middle
+      section of the screen. The free-text input field is STILL visibly
+      oversized in real testing despite a reported 120pt cap — investigate
+      why that cap isn't producing a normal-sized field (confirm it's
+      actually being applied, check for a conflicting minHeight or padding
+      inflating it further) and target something closer to a normal
+      single-line-at-rest text field, not just "smaller than before."
       Current design tokens only, brand board's exact palette is still
-      Phase 4 (decision 23) — this is a layout/sizing correction, not a
-      visual identity change.
+      Phase 4 (decision 23).
+    - **(d) Verify onboarding genre selection only ever happens once.**
+      Per decision 1, this should never re-appear after first launch.
+      Confirm `hasCompletedOnboarding` is being read and persisted
+      correctly and the onboarding flow is not re-triggering on
+      subsequent app opens — this may just be a misunderstanding to rule
+      out, or a real regression to fix, don't assume either way.
     - **(b) Shelf tab unification.** All five categories — Currently
       Reading, Want to Read, Keep Forever, Glad I Read It, Should've
       Stopped — become tappable shelf tiles showing a book count each,
