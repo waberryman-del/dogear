@@ -597,6 +597,19 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       — not wedged between two things the reader is meant to look at and
       use. This is the actual fix; do not reintroduce bottom-pinning for
       this screen without a real, different reason.
+      **[FINAL — reverting to the one version that was objectively
+      pixel-measured as balanced, plus a real bug fix found on this same
+      screenshot]**: (1) Real bug, not a layout preference: the rotating
+      prompt bubbles are showing overlapping/double-exposed text — the
+      crossfade transition between rotation sets is broken. Fix: remove
+      the crossfade animation entirely, use an instant, clean swap when
+      prompts rotate — no transition to glitch. (2) Layout: revert to
+      true vertical centering of the ENTIRE header+bubbles+field block as
+      one fixed-spacing unit (the version from correction #3 / round 6,
+      which was pixel-measured as balanced within 10%, the only version
+      in this whole saga that was objectively confirmed even rather than
+      eyeballed). This is genuinely final — do not iterate further on
+      this screen without new, concrete, specific direction.
     - **(d) Verify onboarding genre selection only ever happens once.**
       Per decision 1, this should never re-appear after first launch.
       Confirm `hasCompletedOnboarding` is being read and persisted

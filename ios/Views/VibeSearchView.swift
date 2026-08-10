@@ -68,43 +68,45 @@ struct VibeSearchView: View {
             // hidden-nav-bar + in-content-header pattern already used by
             // Today and Profile.
             //
-            // Decision #42(a), FINAL spec — every gap below is a literal,
-            // fixed point value from the spec, not a formula and not
-            // adaptive to screen size: spacing:0 here so nothing implicit
-            // sneaks in between header/bubbles/content — `promptBubbles`
-            // carries its own exact top (32pt) and bottom (40pt) padding.
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    header
-                    if isEntryState {
-                        promptBubbles
+            // Decision #42(a), ROOT CAUSE FIX after 9 rounds: pinning the
+            // field to the true bottom of the screen via `.safeAreaInset`
+            // (correction #3 onward) structurally guaranteed a large void
+            // whenever content above it didn't naturally reach that far —
+            // an architecture problem no spacing value could fix. The field
+            // is back in normal document flow now, directly after the last
+            // bubble, separated by the one fixed 40pt gap `promptBubbles`
+            // already carries as its own bottom padding — nothing extra
+            // added here. Any genuine leftover space on a taller screen
+            // falls below the field, past the last interactive element, not
+            // wedged in the middle. `ScrollViewReader` is back too (removed
+            // when the field was pinned and always on-screen) — `queryQuote`
+            // needs it again to scroll back up to the now not-always-visible
+            // field once results are showing.
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
+                        if isEntryState {
+                            promptBubbles
+                        }
+                        promptField
+                            .padding(.horizontal, DogearSpacing.space5)
+                            // Entry state: zero — the 40pt gap already comes
+                            // from `promptBubbles`' own bottom padding right
+                            // above. Results state (bubbles hidden): the
+                            // field sits directly under the header, so it
+                            // needs its own separation.
+                            .padding(.top, isEntryState ? 0 : DogearSpacing.space6)
+                            .id("promptField")
+                        content(scrollProxy: scrollProxy)
+                            .padding(.top, isEntryState ? 0 : DogearSpacing.space6)
                     }
-                    // Only the entry state's spacing is locked to the FINAL
-                    // literal spec above; the results state keeps its prior
-                    // header-to-content gap (untouched, out of scope here).
-                    content
-                        .padding(.top, isEntryState ? 0 : DogearSpacing.space6)
+                    .padding(.top, DogearSpacing.space5)
+                    .padding(.bottom, isEntryState ? 0 : DogearSpacing.space6)
                 }
-                .padding(.top, DogearSpacing.space5)
-                .padding(.bottom, isEntryState ? 0 : DogearSpacing.space6)
             }
             .background(DogearColor.paper)
             .toolbar(.hidden, for: .navigationBar)
-            // Decision #42(a), correction #3: TRUE bottom anchor, always
-            // present regardless of entry/results state — independent of
-            // wherever the bubbles land, not grouped with them. Just a
-            // small, fixed gap above the tab bar. space3 (12pt) alone
-            // measured ~8pt on a real screenshot (tab bar's own padding eats
-            // into it) — bumped to space4 (16pt) to land inside the
-            // requested 12-16pt range with margin instead of right at its
-            // edge.
-            .safeAreaInset(edge: .bottom) {
-                promptField
-                    .padding(.horizontal, DogearSpacing.space5)
-                    .padding(.top, DogearSpacing.space2)
-                    .padding(.bottom, DogearSpacing.space4)
-                    .background(DogearColor.paper)
-            }
             // TIMING instrumentation for the reported keyboard-appear delay —
             // the rotating-timer-pause fix went in unverified last round.
             // Rather than guess again, this logs real timestamps for the
@@ -204,14 +206,14 @@ struct VibeSearchView: View {
     }
 
     @ViewBuilder
-    private var content: some View {
+    private func content(scrollProxy: ScrollViewProxy) -> some View {
         if isSearching && results.isEmpty {
             LoadingStateView(message: "Finding books for that vibe…")
         } else if searchFailed && results.isEmpty {
             ErrorStateView(message: "Couldn't reach your library's brain.", action: retry)
         } else if !results.isEmpty {
             VStack(alignment: .leading, spacing: DogearSpacing.space5) {
-                queryQuote
+                queryQuote(scrollProxy: scrollProxy)
                 if searchFailed {
                     InlineRetryBanner(message: "Couldn't apply that refinement.", action: retry)
                 } else if isSearching {
@@ -252,13 +254,17 @@ struct VibeSearchView: View {
     /// Design System 0.1 Section 13: "Keep the original query visible as an
     /// editable editorial quote." Sits right above the results so a reader
     /// browsing a full grid doesn't have to scroll back to the top of the
-    /// screen to refine or start over — tapping it focuses the real field
-    /// (decision: only one actual text box exists per #13, this is a
-    /// shortcut back to it, not a second input). No scroll-to-top needed
-    /// since decision #42(a) pinned the field to the bottom of the screen
-    /// at all times via `.safeAreaInset` — it's already on screen.
-    private var queryQuote: some View {
+    /// screen to refine or start over — tapping it scrolls back up to the
+    /// real field and focuses it (decision: only one actual text box exists
+    /// per #13, this is a shortcut back to it, not a second input). The
+    /// scroll-back is needed again now that the field lives in normal
+    /// document flow (root-cause fix, decision #42(a)) rather than being
+    /// permanently pinned on-screen via `.safeAreaInset`.
+    private func queryQuote(scrollProxy: ScrollViewProxy) -> some View {
         Button {
+            withAnimation(DogearMotion.standard) {
+                scrollProxy.scrollTo("promptField", anchor: .top)
+            }
             fieldFocused = true
         } label: {
             HStack(spacing: DogearSpacing.space3) {
