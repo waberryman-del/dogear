@@ -68,41 +68,45 @@ struct VibeSearchView: View {
             // hidden-nav-bar + in-content-header pattern already used by
             // Today and Profile.
             //
-            // Decision #42(a), ROOT CAUSE FIX after 9 rounds: pinning the
-            // field to the true bottom of the screen via `.safeAreaInset`
-            // (correction #3 onward) structurally guaranteed a large void
-            // whenever content above it didn't naturally reach that far —
-            // an architecture problem no spacing value could fix. The field
-            // is back in normal document flow now, directly after the last
-            // bubble, separated by the one fixed 40pt gap `promptBubbles`
-            // already carries as its own bottom padding — nothing extra
-            // added here. Any genuine leftover space on a taller screen
-            // falls below the field, past the last interactive element, not
-            // wedged in the middle. `ScrollViewReader` is back too (removed
-            // when the field was pinned and always on-screen) — `queryQuote`
-            // needs it again to scroll back up to the now not-always-visible
-            // field once results are showing.
-            ScrollViewReader { scrollProxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        header
-                        if isEntryState {
-                            promptBubbles
+            // Decision #42(a), FINAL LAYOUT — back to true vertical
+            // centering (this is the mechanism from the round pixel-measured
+            // as balanced within ~10%, top gap vs. bottom gap): header stays
+            // pinned at the top, fixed, untouched. Below it, the
+            // bubbles+field block is treated as one fixed-spacing unit
+            // (internal gaps stay the literal 16pt/40pt values) and
+            // centered within the remaining space via `Spacer(minLength: 32)`
+            // — the same 32pt from the literal spec — before and after the
+            // block as a whole, not stretched between its own children.
+            // `frame(minHeight: geo.size.height)` is what gives the Spacers
+            // real room to distribute in the first place.
+            GeometryReader { geo in
+                ScrollViewReader { scrollProxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 0) {
+                            header
+                            if isEntryState {
+                                Spacer(minLength: 32)
+                                VStack(alignment: .leading, spacing: 0) {
+                                    promptBubbles
+                                    promptField
+                                        .padding(.horizontal, DogearSpacing.space5)
+                                        .padding(.top, 40)
+                                        .id("promptField")
+                                }
+                                Spacer(minLength: 32)
+                            } else {
+                                promptField
+                                    .padding(.horizontal, DogearSpacing.space5)
+                                    .padding(.top, DogearSpacing.space6)
+                                    .id("promptField")
+                                content(scrollProxy: scrollProxy)
+                                    .padding(.top, DogearSpacing.space6)
+                            }
                         }
-                        promptField
-                            .padding(.horizontal, DogearSpacing.space5)
-                            // Entry state: zero — the 40pt gap already comes
-                            // from `promptBubbles`' own bottom padding right
-                            // above. Results state (bubbles hidden): the
-                            // field sits directly under the header, so it
-                            // needs its own separation.
-                            .padding(.top, isEntryState ? 0 : DogearSpacing.space6)
-                            .id("promptField")
-                        content(scrollProxy: scrollProxy)
-                            .padding(.top, isEntryState ? 0 : DogearSpacing.space6)
+                        .padding(.top, DogearSpacing.space5)
+                        .padding(.bottom, isEntryState ? 0 : DogearSpacing.space6)
+                        .frame(minHeight: geo.size.height, alignment: .top)
                     }
-                    .padding(.top, DogearSpacing.space5)
-                    .padding(.bottom, isEntryState ? 0 : DogearSpacing.space6)
                 }
             }
             .background(DogearColor.paper)
@@ -151,12 +155,19 @@ struct VibeSearchView: View {
         !hasSearched && !isSearching
     }
 
-    /// Decision #42(a), FINAL spec — every value here is literal and fixed,
-    /// not a token, not a formula, not adaptive to screen size:
-    /// - 32pt gap after the header (this view's own top padding)
-    /// - 16pt gap between bubbles (this VStack's `spacing`)
-    /// - 40pt gap before the field (this view's own bottom padding)
+    /// Decision #42(a), FINAL spec — literal, fixed values, not tokens:
+    /// 16pt gap between bubbles. The 32pt (header→block) and 40pt
+    /// (bubbles→field) gaps live on the surrounding `Spacer`/padding in
+    /// `body` now, not here — this just owns the bubbles themselves.
     /// Bubble internal padding (18pt) lives on `bubbleButton` below.
+    ///
+    /// CONFIRMED bug, now fixed: the previous `.id(visiblePrompts.map(\.id))`
+    /// + `.transition(.opacity)` + `withAnimation` combination was meant to
+    /// crossfade the whole stack on rotation, but produced overlapping,
+    /// double-exposed text instead — the old and new bubble sets (different
+    /// heights depending on 1- vs 2-line text) both partially rendered
+    /// mid-transition. Fixed by removing the transition/animation entirely:
+    /// a plain, instant swap, no crossfade attempted.
     private var promptBubbles: some View {
         VStack(spacing: 16) {
             ForEach(visiblePrompts) { prompt in
@@ -164,19 +175,13 @@ struct VibeSearchView: View {
             }
         }
         .padding(.horizontal, DogearSpacing.space5)
-        .padding(.top, 32)
-        .padding(.bottom, 40)
-        .id(visiblePrompts.map(\.id))
-        .transition(.opacity)
         .onReceive(Timer.publish(every: 8, on: .main, in: .common).autoconnect()) { _ in
             // Skip the rotation while the field is focused — an animated state
             // change landing in the same run-loop tick as the keyboard's
             // focus-in animation was competing with it and adding a visible
             // beat before the keyboard appeared.
             guard !fieldFocused else { return }
-            withAnimation(DogearMotion.standard) {
-                visiblePrompts = Array(Self.promptPool.shuffled().prefix(Self.visiblePromptCount))
-            }
+            visiblePrompts = Array(Self.promptPool.shuffled().prefix(Self.visiblePromptCount))
         }
     }
 
