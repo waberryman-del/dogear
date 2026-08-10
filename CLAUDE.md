@@ -529,7 +529,18 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       block as a unit, not between its internal elements. This balances
       empty space evenly above and below the block instead of collecting
       it all in one place, while keeping the block's own internal spacing
-      fixed and tight.
+      fixed and tight. **[Correction #3 — after seeing it live, the
+      "bubbles+field as one grouped unit" approach itself was wrong.
+      They should be two separate things, not glued together.]** The
+      field goes back to a TRUE bottom anchor via `safeAreaInset(edge:
+      .bottom)`, with only a small, fixed gap above the tab bar (roughly
+      12-16pt) — independent of wherever the bubbles land, not grouped
+      or centered together with them. The bubbles fill the real middle
+      space between the header and the field — increase both bubble
+      size (more internal padding) and the spacing between them so they
+      naturally occupy that middle real estate, rather than sitting as a
+      small tight cluster with large empty margins around it. Header
+      stays pinned top as before (unchanged, confirmed correct).
     - **(d) Verify onboarding genre selection only ever happens once.**
       Per decision 1, this should never re-appear after first launch.
       Confirm `hasCompletedOnboarding` is being read and persisted
