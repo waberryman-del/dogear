@@ -465,6 +465,37 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       metadata provider — that's a bigger, separate cost/quality decision
       to revisit later if these two fixes aren't sufficient, not something
       to jump to first.
+41. **[Book detail page polish — real device findings, elevated priority]**
+    - **(a) Verdict/recognition/synopsis must reveal as ONE atomic unit,
+      not staggered.** Real testing showed verdict appearing instantly,
+      then recognition popping in ~7s later, then synopsis SWAPPING from
+      one thing to another ~10s after that — jarring and reads as broken
+      even though the underlying data is fine, since all three originate
+      from a single `book-verdict.js` call. Fix: whatever's still pending
+      (recognition + synopsis, or all three if no reason existed to reuse)
+      must load and reveal together, once, when that single call resolves
+      — never one field at a time as it happens to finish rendering.
+    - **(b) Never show stale/fallback content that later gets silently
+      replaced.** The raw `book.summary` fallback shown while the cleaned
+      synopsis generates is exactly this bait-and-switch. Fix: show a
+      clear, contained loading placeholder instead of the raw summary
+      during that wait, then reveal the real (cleaned) synopsis once —
+      content should never visibly change out from under the reader after
+      they've already started reading it.
+    - **(c) Recognition should render as a bulleted list** when it
+      contains more than one distinct fact, not a single paragraph blob —
+      easier to scan, matches the "easy to parse" goal from decision 39.
+    - **(d) Data quality floor.** If a book's lookup returns critically
+      incomplete data (no cover art AND no synopsis/summary at all — a
+      strong signal of a bad/junk match slipping past decision 40's
+      filter), treat it as a failed lookup, not a valid result — skip or
+      retry rather than surface a broken-looking card. High-quality books
+      only; a result with nothing real to show is worse than no result.
+    - **(e) Book covers must never show blank space while loading.** The
+      existing fallback-cover treatment (colored background, folded
+      corner, title text) should appear immediately, with the real image
+      swapping in once loaded asynchronously — this is a regression from
+      or gap in that existing pattern, not new work.
 
 ## Design identity
 - **Palette**: unchanged from the earlier prototype and still the right call — deep
