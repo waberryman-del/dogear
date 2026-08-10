@@ -36,11 +36,16 @@ struct VibeSearchView: View {
     @State private var selectedResult: Recommendation?
     @FocusState private var fieldFocused: Bool
 
-    /// Brand board (docs/brand-board.png), design brief: exactly 5 prompts
-    /// shown at once, rotating as a whole set from a larger pool — not the
-    /// old one-at-a-time carousel. Deliberately universal/evocative and NOT
-    /// derived from the reader's own data (unlike the AI-generated
-    /// refinements below, which are), matching the board's own example tone.
+    /// Decision #42(a), step-back correction: was "exactly 5 prompts shown
+    /// at once" per the original brand board brief — real UX research on
+    /// this pattern (ChatGPT's blank-state suggestions, Apple's "Suggested"
+    /// screens, Spotify's mood pickers) points to showing fewer as reading
+    /// as helpful curation rather than a list to evaluate, regardless of
+    /// spacing. Now shows 3 at once; the underlying rotating pool below
+    /// (still ~12 prompts, still a whole-set rotation not one-at-a-time)
+    /// is unchanged. Deliberately universal/evocative and NOT derived from
+    /// the reader's own data (unlike the AI-generated refinements below,
+    /// which are), matching the board's own example tone.
     private static let promptPool: [VibePromptSuggestion] = [
         .init(text: "It just started raining.", icon: "cloud.rain"),
         .init(text: "I need hope.", icon: "sun.max"),
@@ -55,7 +60,9 @@ struct VibeSearchView: View {
         .init(text: "I need to laugh.", icon: "face.smiling"),
         .init(text: "Take me somewhere I've never been.", icon: "airplane"),
     ]
-    @State private var visiblePrompts: [VibePromptSuggestion] = Array(VibeSearchView.promptPool.shuffled().prefix(5))
+    private static let visiblePromptCount = 3
+    @State private var visiblePrompts: [VibePromptSuggestion] =
+        Array(VibeSearchView.promptPool.shuffled().prefix(VibeSearchView.visiblePromptCount))
 
     var body: some View {
         NavigationStack {
@@ -63,41 +70,26 @@ struct VibeSearchView: View {
             // literal topmost element — no nav-bar chrome above it. Same
             // hidden-nav-bar + in-content-header pattern already used by
             // Today and Profile.
-            GeometryReader { geo in
-                ScrollView {
-                    // Decision #42(a), correction #3: bubbles and the field
-                    // are two separate things, not one grouped/centered unit
-                    // — the field is a TRUE, independent bottom anchor (see
-                    // `.safeAreaInset` below).
-                    //
-                    // Correction #4: fixed inter-bubble spacing still left an
-                    // uneven, top-heavy result (bubbles clustered right after
-                    // the header, one big gap before the field on taller
-                    // screens) — fixed values don't adapt to available space.
-                    // `promptBubbles` now uses `Spacer(minLength:)` *between*
-                    // each bubble instead of a fixed `spacing:`, which makes
-                    // that VStack inherently flexible/growable — SwiftUI
-                    // hands leftover height to the most flexible child, so
-                    // once `frame(minHeight: geo.size.height)` below gives
-                    // this outer VStack more room than its natural size,
-                    // that extra room flows into `promptBubbles`'s internal
-                    // Spacers rather than piling up as blank space after it.
-                    // `geo.size.height` already excludes the field's pinned
-                    // safe-area region (that reservation happens via the
-                    // `.safeAreaInset` below, outside this GeometryReader),
-                    // so this fills exactly the header-to-field gap, robust
-                    // to screen size — no manually-tuned pixel value.
-                    VStack(alignment: .leading, spacing: DogearSpacing.space6) {
-                        header
-                        if isEntryState {
-                            promptBubbles
-                        }
-                        content
+            //
+            // Decision #42(a), step-back correction after 4 rounds of
+            // spacing math: the actual problem was trying to make content
+            // fill the whole screen at all, not the spacing values
+            // themselves. No more GeometryReader / frame(minHeight:) /
+            // flexible Spacer-stretching between correction #4 and here —
+            // just plain, comfortable fixed spacing after the header. The
+            // block ends naturally; whatever's left before the
+            // bottom-anchored field is calm, intentional whitespace, not
+            // something to eliminate or balance against.
+            ScrollView {
+                VStack(alignment: .leading, spacing: DogearSpacing.space6) {
+                    header
+                    if isEntryState {
+                        promptBubbles
                     }
-                    .padding(.top, DogearSpacing.space5)
-                    .padding(.bottom, DogearSpacing.space6)
-                    .frame(minHeight: geo.size.height, alignment: .top)
+                    content
                 }
+                .padding(.top, DogearSpacing.space5)
+                .padding(.bottom, DogearSpacing.space6)
             }
             .background(DogearColor.paper)
             .toolbar(.hidden, for: .navigationBar)
@@ -164,20 +156,16 @@ struct VibeSearchView: View {
     /// padding, up from space3/12pt — so each one feels substantial rather
     /// than a thin tight row.
     ///
-    /// Correction #4: the gaps *between* bubbles are `Spacer(minLength:)`
-    /// now, not a fixed `spacing:` value — this VStack is the flexible
-    /// element `body`'s `frame(minHeight:)` hands leftover space to, so the
-    /// whole stack stretches to genuinely fill the header-to-field gap,
-    /// distributing extra room evenly across every gap instead of leaving it
-    /// all in one place. `minLength` is the floor (never tighter than this,
-    /// even with zero extra room), not the normal resting gap.
+    /// Step-back correction (supersedes correction #4's flexible
+    /// `Spacer(minLength:)` approach): simple, fixed spacing again — no
+    /// longer trying to stretch this stack to reach the field. Comfortable,
+    /// generous, and predictable regardless of screen size; the block just
+    /// ends after 3 bubbles (down from 5, see `visiblePromptCount`) and
+    /// whatever's left before the field is intentional whitespace.
     private var promptBubbles: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(visiblePrompts.enumerated()), id: \.element.id) { index, prompt in
+        VStack(spacing: DogearSpacing.space6) {
+            ForEach(visiblePrompts) { prompt in
                 bubbleButton(prompt)
-                if index < visiblePrompts.count - 1 {
-                    Spacer(minLength: DogearSpacing.space6)
-                }
             }
         }
         .padding(.horizontal, DogearSpacing.space5)
@@ -190,7 +178,7 @@ struct VibeSearchView: View {
             // beat before the keyboard appeared.
             guard !fieldFocused else { return }
             withAnimation(DogearMotion.standard) {
-                visiblePrompts = Array(Self.promptPool.shuffled().prefix(5))
+                visiblePrompts = Array(Self.promptPool.shuffled().prefix(Self.visiblePromptCount))
             }
         }
     }

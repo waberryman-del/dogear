@@ -569,6 +569,19 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       to be eliminated or perfectly balanced — calm, generous whitespace
       there is correct, intentional design, not a bug. This replaces the
       flexible-spacing approach from correction #4.
+      **[FINAL, exact spec after repeated oscillation between "too
+      crowded" and "too empty" — no more vague/interpretable language,
+      every value is now literal and fixed, not left to judgment]**:
+      gap after header = 32pt exactly. Show exactly 4 prompt bubbles (not
+      3, not 5 — splitting the difference between the two failed
+      extremes). Bubble internal padding = 18pt exactly. Gap between
+      bubbles = 16pt exactly (tighter than previous attempts — more
+      breathing room within each bubble via padding, less dead air
+      between them). Gap between the last bubble and the bottom-anchored
+      field = 40pt exactly, fixed, never stretched or rebalanced. Field
+      itself is unchanged from the prior round (already correct). These
+      are final literal values, not a formula or adaptive layout — do not
+      reinterpret or adjust further without explicit new direction.
     - **(d) Verify onboarding genre selection only ever happens once.**
       Per decision 1, this should never re-appear after first launch.
       Confirm `hasCompletedOnboarding` is being read and persisted
