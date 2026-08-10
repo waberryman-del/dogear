@@ -67,6 +67,19 @@ silently reordering these, stop and flag it explicitly instead of just doing it.
   last — no point polishing screens whose shape Phase 2 and 3 are still going to
   change.
 - **Phase 5 — Real-world testing + TestFlight.**
+- **Phase 6 — Accounts & login (post-launch, deliberately NOT before this
+  launch).** Sign in with Apple + Google (Apple requires offering Sign in
+  with Apple if any other third-party login exists — can't be Google-only).
+  This is a real architecture change, not a feature addition: it means a
+  real backend user database and migrating where library data lives from
+  local on-device storage to server-side per-account storage. Deliberately
+  deferred because (1) it doesn't block launch — local-only v1 is a
+  legitimate, common strategy — and (2) this project's clearest repeated
+  lesson has been that pulling a big architecture change into an active
+  build mid-stream costs real stability, even when the idea itself is
+  good. Revisit once there's real user demand for cross-device sync, not
+  before. Decision #29's forward note (name field → real account name)
+  connects to this phase when it eventually happens.
 
 ## Vibe search spec (Phase 2)
 - New backend endpoint: `backend/api/vibe-search.js`. Same auth pattern
