@@ -138,12 +138,13 @@ struct VibeSearchView: View {
         VibePromptField(mode: .editable(text: $query, isFocused: $fieldFocused, onSubmit: search))
     }
 
-    /// Decision #42(a): real vertical spacing between bubbles (space4, not
-    /// the tight space2 this used to have) — and now positioned in the
+    /// Decision #42(a), round 2: the first attempt (space4 = 16pt) still read
+    /// as clustered on a real device — bumped to space6 (24pt), inside the
+    /// 24-32pt range real-device testing called for. Positioned in the
     /// middle of the screen (see the Spacers around this in `body`) rather
     /// than clustered directly under the header.
     private var promptBubbles: some View {
-        VStack(spacing: DogearSpacing.space4) {
+        VStack(spacing: DogearSpacing.space6) {
             ForEach(visiblePrompts) { prompt in
                 Button {
                     query = prompt.text

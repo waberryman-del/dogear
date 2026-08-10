@@ -42,13 +42,11 @@ struct VibePromptField: View {
             TextField(placeholder, text: text, axis: .vertical)
                 .font(DogearType.body)
                 .foregroundStyle(DogearColor.ink)
+                // This alone now does 100% of the height work — collapsed
+                // (empty/short) sizes to 1 line, grows up to 5 lines with
+                // typed content, with no competing `.frame` fighting it (see
+                // the note below on why one was removed).
                 .lineLimit(1...5)
-                // Design System 0.1 Section 08: "Minimum height 56 pt collapsed;
-                // grows to 120 pt for multiline." Without `.fixedSize`, a
-                // vertical-axis TextField inside a ScrollView can settle at its
-                // maximum line-limit height instead of the actual content height
-                // on first layout — this pins it to its real intrinsic size.
-                .fixedSize(horizontal: false, vertical: true)
                 .focused(isFocused)
                 .submitLabel(.search)
                 .onSubmit { triggerSubmit(onSubmit) }
@@ -70,12 +68,23 @@ struct VibePromptField: View {
         }
         .padding(.horizontal, DogearSpacing.space4)
         .padding(.vertical, DogearSpacing.space3)
-        // Decision #42(a): real-device testing found this oversized — the
-        // Design System's own spec ("minimum height 56pt collapsed; grows to
-        // 120pt for multiline") only ever had the minHeight half enforced
-        // here. No maxHeight meant nothing actually capped growth at 120,
-        // letting it balloon past the spec on longer queries.
-        .frame(minHeight: 56, maxHeight: 120)
+        // Decision #42(a), round 3 — CONFIRMED via real-build A/B testing on
+        // a simulator (measured pixel height at each step, not guessed):
+        // round 1 added `.frame(minHeight: 56, maxHeight: 120)` but left
+        // `.fixedSize(vertical: true)` in place → still oversized (~107pt
+        // empty). Round 2's theory ("fixedSize is fighting the frame") was
+        // WRONG: removing fixedSize while keeping this same `.frame` made it
+        // *worse*, not better (~117pt empty, nearly the max, confirmed by
+        // screenshot measurement). The real mechanism: proposing a flexible
+        // [56,120] height range to a `TextField(axis: .vertical)` makes it
+        // expand toward the top of that range regardless of actual content —
+        // it does not "size to content, then get clamped." The fix that
+        // actually measured correctly (~65pt collapsed, confirmed) is to
+        // give this field NO explicit height frame at all: let `lineLimit`
+        // below and the 40pt submit arrow's natural height do 100% of the
+        // sizing. Do not reintroduce a `.frame(minHeight:/maxHeight:)` here
+        // without re-measuring on a real build first — it's the thing that
+        // broke this twice.
         .background(DogearColor.linen)
         .clipShape(RoundedRectangle(cornerRadius: DogearRadius.control))
         .overlay(
