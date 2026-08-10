@@ -36,16 +36,13 @@ struct VibeSearchView: View {
     @State private var selectedResult: Recommendation?
     @FocusState private var fieldFocused: Bool
 
-    /// Decision #42(a), step-back correction: was "exactly 5 prompts shown
-    /// at once" per the original brand board brief — real UX research on
-    /// this pattern (ChatGPT's blank-state suggestions, Apple's "Suggested"
-    /// screens, Spotify's mood pickers) points to showing fewer as reading
-    /// as helpful curation rather than a list to evaluate, regardless of
-    /// spacing. Now shows 3 at once; the underlying rotating pool below
-    /// (still ~12 prompts, still a whole-set rotation not one-at-a-time)
-    /// is unchanged. Deliberately universal/evocative and NOT derived from
-    /// the reader's own data (unlike the AI-generated refinements below,
-    /// which are), matching the board's own example tone.
+    /// Decision #42(a), final spec: exactly 4 prompts shown at once (was 5
+    /// per the original brand board brief, briefly 3 in an intermediate
+    /// round). The underlying rotating pool below (still ~12 prompts, still
+    /// a whole-set rotation not one-at-a-time) is unchanged. Deliberately
+    /// universal/evocative and NOT derived from the reader's own data
+    /// (unlike the AI-generated refinements below, which are), matching the
+    /// board's own example tone.
     private static let promptPool: [VibePromptSuggestion] = [
         .init(text: "It just started raining.", icon: "cloud.rain"),
         .init(text: "I need hope.", icon: "sun.max"),
@@ -60,7 +57,7 @@ struct VibeSearchView: View {
         .init(text: "I need to laugh.", icon: "face.smiling"),
         .init(text: "Take me somewhere I've never been.", icon: "airplane"),
     ]
-    private static let visiblePromptCount = 3
+    private static let visiblePromptCount = 4
     @State private var visiblePrompts: [VibePromptSuggestion] =
         Array(VibeSearchView.promptPool.shuffled().prefix(VibeSearchView.visiblePromptCount))
 
@@ -71,25 +68,25 @@ struct VibeSearchView: View {
             // hidden-nav-bar + in-content-header pattern already used by
             // Today and Profile.
             //
-            // Decision #42(a), step-back correction after 4 rounds of
-            // spacing math: the actual problem was trying to make content
-            // fill the whole screen at all, not the spacing values
-            // themselves. No more GeometryReader / frame(minHeight:) /
-            // flexible Spacer-stretching between correction #4 and here —
-            // just plain, comfortable fixed spacing after the header. The
-            // block ends naturally; whatever's left before the
-            // bottom-anchored field is calm, intentional whitespace, not
-            // something to eliminate or balance against.
+            // Decision #42(a), FINAL spec — every gap below is a literal,
+            // fixed point value from the spec, not a formula and not
+            // adaptive to screen size: spacing:0 here so nothing implicit
+            // sneaks in between header/bubbles/content — `promptBubbles`
+            // carries its own exact top (32pt) and bottom (40pt) padding.
             ScrollView {
-                VStack(alignment: .leading, spacing: DogearSpacing.space6) {
+                VStack(alignment: .leading, spacing: 0) {
                     header
                     if isEntryState {
                         promptBubbles
                     }
+                    // Only the entry state's spacing is locked to the FINAL
+                    // literal spec above; the results state keeps its prior
+                    // header-to-content gap (untouched, out of scope here).
                     content
+                        .padding(.top, isEntryState ? 0 : DogearSpacing.space6)
                 }
                 .padding(.top, DogearSpacing.space5)
-                .padding(.bottom, DogearSpacing.space6)
+                .padding(.bottom, isEntryState ? 0 : DogearSpacing.space6)
             }
             .background(DogearColor.paper)
             .toolbar(.hidden, for: .navigationBar)
@@ -152,23 +149,21 @@ struct VibeSearchView: View {
         !hasSearched && !isSearching
     }
 
-    /// Decision #42(a), correction #3: bigger bubbles — space5/20pt vertical
-    /// padding, up from space3/12pt — so each one feels substantial rather
-    /// than a thin tight row.
-    ///
-    /// Step-back correction (supersedes correction #4's flexible
-    /// `Spacer(minLength:)` approach): simple, fixed spacing again — no
-    /// longer trying to stretch this stack to reach the field. Comfortable,
-    /// generous, and predictable regardless of screen size; the block just
-    /// ends after 3 bubbles (down from 5, see `visiblePromptCount`) and
-    /// whatever's left before the field is intentional whitespace.
+    /// Decision #42(a), FINAL spec — every value here is literal and fixed,
+    /// not a token, not a formula, not adaptive to screen size:
+    /// - 32pt gap after the header (this view's own top padding)
+    /// - 16pt gap between bubbles (this VStack's `spacing`)
+    /// - 40pt gap before the field (this view's own bottom padding)
+    /// Bubble internal padding (18pt) lives on `bubbleButton` below.
     private var promptBubbles: some View {
-        VStack(spacing: DogearSpacing.space6) {
+        VStack(spacing: 16) {
             ForEach(visiblePrompts) { prompt in
                 bubbleButton(prompt)
             }
         }
         .padding(.horizontal, DogearSpacing.space5)
+        .padding(.top, 32)
+        .padding(.bottom, 40)
         .id(visiblePrompts.map(\.id))
         .transition(.opacity)
         .onReceive(Timer.publish(every: 8, on: .main, in: .common).autoconnect()) { _ in
@@ -183,6 +178,8 @@ struct VibeSearchView: View {
         }
     }
 
+    /// Decision #42(a), FINAL spec: 18pt internal padding, literal — not
+    /// the `DogearSpacing` scale (16pt/space4 and 20pt/space5 both miss it).
     private func bubbleButton(_ prompt: VibePromptSuggestion) -> some View {
         Button {
             query = prompt.text
@@ -198,8 +195,7 @@ struct VibeSearchView: View {
                     .foregroundStyle(DogearColor.ink)
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, DogearSpacing.space5)
-            .padding(.vertical, DogearSpacing.space5)
+            .padding(18)
             .frame(maxWidth: .infinity)
             .background(DogearColor.linen)
             .clipShape(RoundedRectangle(cornerRadius: DogearRadius.control))

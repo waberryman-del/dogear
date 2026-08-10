@@ -582,6 +582,21 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       itself is unchanged from the prior round (already correct). These
       are final literal values, not a formula or adaptive layout — do not
       reinterpret or adjust further without explicit new direction.
+      **[ROOT CAUSE FOUND after 9 rounds — this was never a spacing-value
+      problem.]** The field being pinned to the true bottom of the screen
+      via `safeAreaInset(edge: .bottom)`, independent of content length,
+      structurally guarantees a large, ugly void whenever the content
+      above it (header + 4 bubbles) doesn't naturally reach that far down
+      — no spacing value can fix this, because the gap is just "whatever
+      screen height is left over," not a designed distance. **Final
+      structural fix**: remove the bottom pin entirely. The field returns
+      to normal document flow, directly after the last bubble, separated
+      by one comfortable fixed gap (40pt, as already specified). Any
+      genuine leftover vertical space (on a screen taller than the
+      content) falls below the field, past the last interactive element
+      — not wedged between two things the reader is meant to look at and
+      use. This is the actual fix; do not reintroduce bottom-pinning for
+      this screen without a real, different reason.
     - **(d) Verify onboarding genre selection only ever happens once.**
       Per decision 1, this should never re-appear after first launch.
       Confirm `hasCompletedOnboarding` is being read and persisted
