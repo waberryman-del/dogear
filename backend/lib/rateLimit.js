@@ -35,7 +35,7 @@ const redis = new Redis({
 });
 
 const WINDOW_SECONDS = 24 * 60 * 60; // 1 day
-const MAX_REQUESTS_PER_WINDOW = 50;
+const MAX_REQUESTS_PER_WINDOW = 3; // TEMPORARY — live-verifying the limit actually works, revert to 50 after
 
 // Requests with no device ID (an old client build, or a malformed request)
 // share one bucket rather than bypassing the limit entirely — keeps "just
