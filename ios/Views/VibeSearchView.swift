@@ -63,54 +63,43 @@ struct VibeSearchView: View {
             // literal topmost element — no nav-bar chrome above it. Same
             // hidden-nav-bar + in-content-header pattern already used by
             // Today and Profile.
-            GeometryReader { geo in
-                ScrollView {
-                    // Decision #42(a), round 5 — CONFIRMED on a real device:
-                    // round 4 grouped bubbles+field into one tight block and
-                    // put it right after the header, but with nothing left
-                    // to balance the leftover space, it ALL collected below
-                    // that block as one big void — same problem, different
-                    // location. Real fix: keep the headline pinned exactly
-                    // where it is (top, fixed), then center the bubbles+field
-                    // block — as a single unit, internal spacing untouched —
-                    // within the remaining space below the headline using a
-                    // `Spacer()` before and after the block itself (not
-                    // between its internal elements). `frame(minHeight:)`
-                    // below is what makes the Spacers able to do anything at
-                    // all inside a ScrollView — without it there's no extra
-                    // space for them to distribute in the first place.
-                    VStack(alignment: .leading, spacing: 0) {
-                        header
-                            .padding(.bottom, DogearSpacing.space6)
-                        if isEntryState {
-                            Spacer(minLength: DogearSpacing.space6)
-                            VStack(alignment: .leading, spacing: DogearSpacing.space6) {
-                                promptBubbles
-                                promptField
-                                    .padding(.horizontal, DogearSpacing.space5)
-                            }
-                            Spacer(minLength: DogearSpacing.space6)
-                        }
-                        content
+            ScrollView {
+                // Decision #42(a), correction #3 — real product clarification
+                // after seeing it live: bubbles and the field are two
+                // separate things, not one grouped/centered unit (that was
+                // wrong from round 5). The field is a TRUE, independent
+                // bottom anchor (see `.safeAreaInset` below) — it doesn't
+                // care where the bubbles are. The bubbles sit in normal flow
+                // right after the header; they now fill the real middle
+                // space themselves via bigger size + spacing (see
+                // `promptBubbles`) rather than needing GeometryReader/Spacer
+                // centering tricks to look intentional.
+                VStack(alignment: .leading, spacing: DogearSpacing.space6) {
+                    header
+                    if isEntryState {
+                        promptBubbles
                     }
-                    .padding(.top, DogearSpacing.space5)
-                    .padding(.bottom, DogearSpacing.space6)
-                    .frame(minHeight: geo.size.height, alignment: .top)
+                    content
                 }
+                .padding(.top, DogearSpacing.space5)
+                .padding(.bottom, DogearSpacing.space6)
             }
             .background(DogearColor.paper)
             .toolbar(.hidden, for: .navigationBar)
-            // Pinned only once there's real (potentially long) content to
-            // scroll through — a results grid could otherwise push the field
-            // far off-screen. Not needed in the entry state (see above).
+            // Decision #42(a), correction #3: TRUE bottom anchor, always
+            // present regardless of entry/results state — independent of
+            // wherever the bubbles land, not grouped with them. Just a
+            // small, fixed gap above the tab bar. space3 (12pt) alone
+            // measured ~8pt on a real screenshot (tab bar's own padding eats
+            // into it) — bumped to space4 (16pt) to land inside the
+            // requested 12-16pt range with margin instead of right at its
+            // edge.
             .safeAreaInset(edge: .bottom) {
-                if !isEntryState {
-                    promptField
-                        .padding(.horizontal, DogearSpacing.space5)
-                        .padding(.top, DogearSpacing.space3)
-                        .padding(.bottom, DogearSpacing.space2)
-                        .background(DogearColor.paper)
-                }
+                promptField
+                    .padding(.horizontal, DogearSpacing.space5)
+                    .padding(.top, DogearSpacing.space2)
+                    .padding(.bottom, DogearSpacing.space4)
+                    .background(DogearColor.paper)
             }
             // TIMING instrumentation for the reported keyboard-appear delay —
             // the rotating-timer-pause fix went in unverified last round.
@@ -156,14 +145,14 @@ struct VibeSearchView: View {
         !hasSearched && !isSearching
     }
 
-    /// Decision #42(a), round 2: the first attempt (space4 = 16pt) still read
-    /// as clustered on a real device — bumped to space6 (24pt), inside the
-    /// 24-32pt range real-device testing called for. Round 5: this internal
-    /// spacing stays fixed/tight regardless of screen size — it's the
-    /// bubbles+field block *as a whole* that gets centered below the header
-    /// (see `body`), not the individual bubbles within it.
+    /// Decision #42(a), correction #3: no longer trying to *position* the
+    /// bubbles into the middle of the screen via external centering — they
+    /// now genuinely occupy that space themselves, via bigger bubbles
+    /// (space5/20pt vertical padding, up from space3/12pt) and more room
+    /// between them (space8/32pt, up from space6/24pt). Plain natural flow
+    /// right after the header, no Spacer/GeometryReader involved.
     private var promptBubbles: some View {
-        VStack(spacing: DogearSpacing.space6) {
+        VStack(spacing: DogearSpacing.space8) {
             ForEach(visiblePrompts) { prompt in
                 Button {
                     query = prompt.text
@@ -179,8 +168,8 @@ struct VibeSearchView: View {
                             .foregroundStyle(DogearColor.ink)
                         Spacer(minLength: 0)
                     }
-                    .padding(.horizontal, DogearSpacing.space4)
-                    .padding(.vertical, DogearSpacing.space3)
+                    .padding(.horizontal, DogearSpacing.space5)
+                    .padding(.vertical, DogearSpacing.space5)
                     .frame(maxWidth: .infinity)
                     .background(DogearColor.linen)
                     .clipShape(RoundedRectangle(cornerRadius: DogearRadius.control))

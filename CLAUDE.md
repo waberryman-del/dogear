@@ -541,6 +541,20 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       naturally occupy that middle real estate, rather than sitting as a
       small tight cluster with large empty margins around it. Header
       stays pinned top as before (unchanged, confirmed correct).
+      **[Correction #4 — fixed inter-bubble spacing still leaves an
+      uneven, top-heavy result: bubbles cluster right after the header
+      with one large gap before the field on taller screens, since fixed
+      gaps don't adapt to available space.]** Replace fixed inter-bubble
+      spacing with FLEXIBLE spacing between bubbles (e.g. `Spacer
+      (minLength:)` between each, not a fixed value) so the whole bubble
+      stack genuinely stretches to fill the space between the header and
+      the field, distributing any extra room evenly across all the gaps
+      rather than collecting it in one place below the last bubble. This
+      should be robust across screen sizes, not another manually-tuned
+      fixed pixel value. Also: reduce the text field's internal padding —
+      a single short placeholder line currently looks lost inside an
+      oversized box; the box should feel proportionate to what's actually
+      inside it at rest.
     - **(d) Verify onboarding genre selection only ever happens once.**
       Per decision 1, this should never re-appear after first launch.
       Confirm `hasCompletedOnboarding` is being read and persisted
