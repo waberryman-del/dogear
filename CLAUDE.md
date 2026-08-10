@@ -81,6 +81,30 @@ silently reordering these, stop and flag it explicitly instead of just doing it.
   before. Decision #29's forward note (name field → real account name)
   connects to this phase when it eventually happens.
 
+## Phase 4 execution plan (locked, per Walker's direction)
+Phase 4 is staged, not one big pass — each stage verified on-device before
+the next starts:
+1. **Foundation** — design tokens: colors, typography, spacing (may already
+   mostly exist from the earlier design-system pass — inspect first, don't
+   assume a rebuild is needed).
+2. **Real app icon.**
+3. **Shelf visuals** — the three finished shelves as color-coded, vertically
+   stacked art (green/tan/oxblood), replacing the current plain tiles.
+4. **Fold-gesture interaction** (decision 6) — never built yet.
+
+**Brand board fidelity**: use `docs/brand-board.png` as strong direction,
+not literal gospel — adapt where something doesn't translate well to a real
+screen. This is a deliberate change from decision 23's earlier "intended
+source of truth" framing — direction, not a pixel-for-pixel mandate.
+
+**Critical process fix, given the Vibe Search saga**: for every screen
+touched in this phase, compare directly against the actual brand board
+mockup image, not a written description of it. Described spacing values
+translated back and forth through chat repeatedly failed to converge:
+nine-plus rounds on one screen, each fix creating a new imbalance. Visual
+comparison against the real reference image is the method going forward,
+not another round of numeric values in prose.
+
 ## Product strategy reference (docs/product-strategy.md)
 A full product-direction brief exists at `docs/product-strategy.md`, written
 independently and reviewed for fit against the current build. **Treat it as
