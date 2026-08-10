@@ -81,6 +81,48 @@ silently reordering these, stop and flag it explicitly instead of just doing it.
   before. Decision #29's forward note (name field → real account name)
   connects to this phase when it eventually happens.
 
+## Product strategy reference (docs/product-strategy.md)
+A full product-direction brief exists at `docs/product-strategy.md`, written
+independently and reviewed for fit against the current build. **Treat it as
+validation and longer-term direction, not a new requirements document** — do
+not implement anything from it without a real, dedicated planning
+conversation first, same discipline as every other major decision here.
+
+What's already confirmed aligned (no action needed — these already exist):
+Today's daily-3 model, Vibe Search's taste-blended natural-language
+discovery, specific non-generic AI reasoning (decision 7), never-repeat/
+recency-weighting/taste-blending (decisions 8-10), never-fabricated book
+data via real metadata sources (decision 40), and the three-shelf system as
+a real (if coarser) version of the document's "why" signal concept.
+
+What's recorded as a genuine future opportunity, explicitly NOT scheduled
+as post-launch-only — evaluate after current launch-critical work and real
+user testing, could belong in v1 or a fast-follow depending on what testing
+shows:
+- A persistent, user-correctable Taste Profile (the document's section 6) —
+  distinct from today's implicit per-request taste-blending.
+- Deeper free-text "why I liked/disliked this" signals beyond the three
+  shelves (document's section 5).
+
+What's explicitly deferred to its own dedicated discussion, not bundled
+into other work: monetization/freemium structure (document's sections
+17-19) — no change to the existing "no in-app purchases" rule until that
+conversation happens.
+
+**Known conflict, not silently resolved**: the document's section 13
+proposes Goodreads/library import as a cold-start onboarding mechanism.
+This directly conflicts with decision #1 ("no book search, no CSV import").
+**Decision #1 wins for now** — import is not being added on the strength of
+the strategy document alone; revisit only via an intentional, separate
+decision to amend #1.
+
+Guiding filter for future decisions, per the document's own framing: Dogear
+should get better at understanding the reader over time, and that
+understanding should make recommendations meaningfully better — but this
+principle does not license new scope before the currently-built product has
+been tested with real users. Launch-critical roadmap work takes priority
+over anything in this section right now.
+
 ## Vibe search spec (Phase 2)
 - New backend endpoint: `backend/api/vibe-search.js`. Same auth pattern
   (`X-App-Secret`), same book-metadata enrichment pattern (Google Books → Open
