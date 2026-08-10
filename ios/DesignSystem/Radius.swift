@@ -4,7 +4,7 @@ import CoreGraphics
 enum DogearRadius {
     static let small: CGFloat = 10       // tags, compact chips
     static let control: CGFloat = 14     // fields, secondary buttons
-    static let card: CGFloat = 20        // recommendation/content cards
+    static let card: CGFloat = 16        // recommendation/content cards — brand-board.png UI Elements swatch states 16pt exactly
     static let sheet: CGFloat = 28       // custom sheets, hero containers
     static let round: CGFloat = 999      // pills only
 }

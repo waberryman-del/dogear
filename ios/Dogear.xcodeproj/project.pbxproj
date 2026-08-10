@@ -10,74 +10,88 @@
 		08B6C2B359DA511F8B6CF3C1 /* Radius.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16F6AC22B60693A1A58E39A /* Radius.swift */; };
 		11D82512F84BEF5AB3255AF9 /* MyShelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CDD781F4982ECA991B971D3 /* MyShelfView.swift */; };
 		12AFF6743E64F9705DD728C3 /* RecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A9F16DD3CD8D378DC9171F3 /* RecommendationEngine.swift */; };
+		165CB9AEB70DFC6F991E9411 /* PlayfairDisplay-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 435668CDEC89E1A7BCBFA550 /* PlayfairDisplay-Regular.ttf */; };
 		1662CDEAE4E315CAED701BDF /* HeroReadingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D644A147FCC71CC5607C8660 /* HeroReadingCard.swift */; };
-		FF00F9F6045A471F8634558E /* DailyPickCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C8D8F6448EE40BFA597CF80 /* DailyPickCard.swift */; };
-		D4ADC87927B247F6B49033B0 /* MidpointCheckInCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51508BB9D0324C38B648FA78 /* MidpointCheckInCard.swift */; };
 		1BA3B9778421AC55C039B087 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50BF150706FFE909DAB55 /* Motion.swift */; };
-		D13A769E327647058F564B89 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26A0A3F1810548BA819DA260 /* Haptics.swift */; };
 		2922FB03A48C45097C9A4DA1 /* RecommendationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D13E0C4958AB37EB52984106 /* RecommendationCard.swift */; };
 		38A62EFB30E62C717A02B6CE /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388C1C21E294ED14AA91D0F1 /* AppRootView.swift */; };
 		3E5267540396AB4614DC2C3F /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E2C7C1C2BF4B577E773EFB /* TodayView.swift */; };
-		872E8C64026E4081812173F8 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 426818A945944989AE941C3F /* SearchView.swift */; };
 		407E6592C9286CBAD23CEF2B /* DogearChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AA3C2B3FCF9D998576CAF09 /* DogearChip.swift */; };
 		43800295D5E0B300DA3500C8 /* VibeSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B081C5766302DCB70740F14 /* VibeSearchView.swift */; };
 		487FFA5B5A3A396C7B07F04B /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B2F53441F920C23DB3E64A8 /* RootTabView.swift */; };
+		53A9533AF89F3A60636C70D3 /* Inter-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9E84F7171B0C1004327A3E77 /* Inter-SemiBold.ttf */; };
 		58AF95D724B9D74D65C38A11 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 870E944D70CCC3F2D62DD3A9 /* OnboardingView.swift */; };
 		624820D8DCC44A562ED34F6C /* Color+Dogear.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2497FF2C26F550143C1F1F38 /* Color+Dogear.swift */; };
 		677C57EA87DE231E5FB50D6D /* Book.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28169EC0586B53F9F89B2E7 /* Book.swift */; };
 		6BE93F21AD3CAAAAD641295C /* DogearButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B2B8ADE8BAB132AEE6AB8A /* DogearButton.swift */; };
+		6CB3280EACFBCF7BDD58B5BD /* Inter-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4D6C25798C15364B2DBE20BA /* Inter-Regular.ttf */; };
 		72F4086F52113856D4DA9D33 /* LibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D368EFF48A6CEAB5DF0A7252 /* LibraryStore.swift */; };
+		7647AFCCAF62124231D0319F /* MidpointCheckInCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27688110D9A7D53ED3D500CF /* MidpointCheckInCard.swift */; };
 		8F787D7CF348666A90D22CA7 /* RecommendationRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC7FFAC87AA1DCC75863205 /* RecommendationRowView.swift */; };
 		8FCD8147D6B79BE8AB84B7D1 /* BookCoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D4CE24CB190703A2597D2EE /* BookCoverView.swift */; };
 		913D56AC3CA5AF99C819EA7E /* VibePromptField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9899110BC1BBCA03FDAD41FC /* VibePromptField.swift */; };
 		9A2E852356CF2357705AD047 /* BookDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA778A5AF4BFC532B3CBA34A /* BookDetailView.swift */; };
 		9F3E51CE439393E43F6F3524 /* StartReadingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 764687EC9385CA6A90741172 /* StartReadingSheet.swift */; };
+		AB7590CFA6646125BEAF7F69 /* LICENSE-Inter.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1C11EED26B16B854B00895FD /* LICENSE-Inter.txt */; };
+		B2860027F44738A670AEF97E /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACEA4E0B0F81A8DCD44EE327 /* ProfileView.swift */; };
+		B2F09D2155370C640382C78A /* DailyPickCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CE7A8A96102D4170C3FFA74 /* DailyPickCard.swift */; };
 		BE6DF395AE809B7EDDC92AA2 /* Spacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDE17B4346A1DF9B84CE8CF /* Spacing.swift */; };
 		C6AF9E2B67FB556AB0F7305F /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF13DB9134922F21AE8E6542 /* StateViews.swift */; };
 		D021A5C5C689E1989A2EEA82 /* RecommendationGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE00C107C2C38F6FEE7C1E59 /* RecommendationGrid.swift */; };
 		D0759359C84DEE65A769BA28 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1221870A53B0CB57D50AE3E9 /* Assets.xcassets */; };
+		D67902666B7AFEA934BA77AC /* LICENSE-PlayfairDisplay.txt in Resources */ = {isa = PBXBuildFile; fileRef = F641CDD2C97AB4B6744156C1 /* LICENSE-PlayfairDisplay.txt */; };
 		DC163FF1CF376628C2DCC93C /* ReadingProgressSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B22962813AF30BE67878732 /* ReadingProgressSheet.swift */; };
 		E1CC8ED3BDEC5EBF40F22F7D /* DogearApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBA93B138CDB691769D27D95 /* DogearApp.swift */; };
+		E203F5071763E42AC89F6B74 /* PlayfairDisplay-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B588E6FAD31F602D9D2D5689 /* PlayfairDisplay-Bold.ttf */; };
+		EBA1C2763C11F1E69399CAD2 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7BC39D37531D2113D941A0 /* SearchView.swift */; };
+		F0D4DF8300B9B5A0CF689C3A /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 243960A89975D69EADC0AD8A /* Haptics.swift */; };
 		F2D9B3F7964F3E3ABAC6A4B6 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = F647FD8AA8FB7BF21F6B4E47 /* Typography.swift */; };
+		FD36DBDF1D78A02B4BBA6532 /* Inter-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 2DF207C7CD84B4A0FC521840 /* Inter-Medium.ttf */; };
 		FFE1209072A046D943853A12 /* OtherViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C773F1E1E925E5A15625A1FA /* OtherViews.swift */; };
-		119662F84411429EA3CC5A78 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB74ADF87E4451B8FF6D512 /* ProfileView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1221870A53B0CB57D50AE3E9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1B46B8408922363F8F3ED528 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		1C11EED26B16B854B00895FD /* LICENSE-Inter.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSE-Inter.txt"; sourceTree = "<group>"; };
 		1D4CE24CB190703A2597D2EE /* BookCoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCoverView.swift; sourceTree = "<group>"; };
 		21E2C7C1C2BF4B577E773EFB /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
-		426818A945944989AE941C3F /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		243960A89975D69EADC0AD8A /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		2497FF2C26F550143C1F1F38 /* Color+Dogear.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Dogear.swift"; sourceTree = "<group>"; };
+		27688110D9A7D53ED3D500CF /* MidpointCheckInCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MidpointCheckInCard.swift; sourceTree = "<group>"; };
 		2B081C5766302DCB70740F14 /* VibeSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VibeSearchView.swift; sourceTree = "<group>"; };
 		2CDD781F4982ECA991B971D3 /* MyShelfView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyShelfView.swift; sourceTree = "<group>"; };
+		2DF207C7CD84B4A0FC521840 /* Inter-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Inter-Medium.ttf"; sourceTree = "<group>"; };
 		388C1C21E294ED14AA91D0F1 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
 		3AA3C2B3FCF9D998576CAF09 /* DogearChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DogearChip.swift; sourceTree = "<group>"; };
+		435668CDEC89E1A7BCBFA550 /* PlayfairDisplay-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlayfairDisplay-Regular.ttf"; sourceTree = "<group>"; };
+		4D6C25798C15364B2DBE20BA /* Inter-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Inter-Regular.ttf"; sourceTree = "<group>"; };
 		5A9F16DD3CD8D378DC9171F3 /* RecommendationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationEngine.swift; sourceTree = "<group>"; };
 		764687EC9385CA6A90741172 /* StartReadingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartReadingSheet.swift; sourceTree = "<group>"; };
 		870E944D70CCC3F2D62DD3A9 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		9899110BC1BBCA03FDAD41FC /* VibePromptField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VibePromptField.swift; sourceTree = "<group>"; };
 		9B22962813AF30BE67878732 /* ReadingProgressSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingProgressSheet.swift; sourceTree = "<group>"; };
 		9B2F53441F920C23DB3E64A8 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		9CE7A8A96102D4170C3FFA74 /* DailyPickCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyPickCard.swift; sourceTree = "<group>"; };
 		9D38E5D411645DA14B0AF51A /* Dogear.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Dogear.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9E84F7171B0C1004327A3E77 /* Inter-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Inter-SemiBold.ttf"; sourceTree = "<group>"; };
 		A4B2B8ADE8BAB132AEE6AB8A /* DogearButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DogearButton.swift; sourceTree = "<group>"; };
 		AAC7FFAC87AA1DCC75863205 /* RecommendationRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationRowView.swift; sourceTree = "<group>"; };
+		ACEA4E0B0F81A8DCD44EE327 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		AE00C107C2C38F6FEE7C1E59 /* RecommendationGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationGrid.swift; sourceTree = "<group>"; };
 		B4C50BF150706FFE909DAB55 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
-		26A0A3F1810548BA819DA260 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		B588E6FAD31F602D9D2D5689 /* PlayfairDisplay-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlayfairDisplay-Bold.ttf"; sourceTree = "<group>"; };
+		BD7BC39D37531D2113D941A0 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		C28169EC0586B53F9F89B2E7 /* Book.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
 		C773F1E1E925E5A15625A1FA /* OtherViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherViews.swift; sourceTree = "<group>"; };
-		6BB74ADF87E4451B8FF6D512 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		CF13DB9134922F21AE8E6542 /* StateViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateViews.swift; sourceTree = "<group>"; };
 		D13E0C4958AB37EB52984106 /* RecommendationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationCard.swift; sourceTree = "<group>"; };
 		D368EFF48A6CEAB5DF0A7252 /* LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryStore.swift; sourceTree = "<group>"; };
 		D644A147FCC71CC5607C8660 /* HeroReadingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroReadingCard.swift; sourceTree = "<group>"; };
-		5C8D8F6448EE40BFA597CF80 /* DailyPickCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyPickCard.swift; sourceTree = "<group>"; };
-		51508BB9D0324C38B648FA78 /* MidpointCheckInCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MidpointCheckInCard.swift; sourceTree = "<group>"; };
 		DA778A5AF4BFC532B3CBA34A /* BookDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailView.swift; sourceTree = "<group>"; };
 		E16F6AC22B60693A1A58E39A /* Radius.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Radius.swift; sourceTree = "<group>"; };
 		ECDE17B4346A1DF9B84CE8CF /* Spacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Spacing.swift; sourceTree = "<group>"; };
+		F641CDD2C97AB4B6744156C1 /* LICENSE-PlayfairDisplay.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSE-PlayfairDisplay.txt"; sourceTree = "<group>"; };
 		F647FD8AA8FB7BF21F6B4E47 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		FBA93B138CDB691769D27D95 /* DogearApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DogearApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -91,17 +105,26 @@
 				BAD7A90D8B9FE44E56854BA5 /* Generated */,
 				3B5B5DC5926678FC646BD9FC /* ios */,
 				C37E10CAFBAAFE82BCA3EEC1 /* Models */,
+				0F252D0BDF514B3607F87910 /* Resources */,
 				2ECEB97AEC9C03D9B0753E01 /* Services */,
 				635FC13D044060FA22A0F26F /* Views */,
 				F815A74F4917F3EB1F1447A3 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
+		0F252D0BDF514B3607F87910 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				DB53D8ABDA35EC1C8C2546D8 /* Fonts */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		2B3F0D8C848C33638F00EF92 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
 				2497FF2C26F550143C1F1F38 /* Color+Dogear.swift */,
-				26A0A3F1810548BA819DA260 /* Haptics.swift */,
+				243960A89975D69EADC0AD8A /* Haptics.swift */,
 				B4C50BF150706FFE909DAB55 /* Motion.swift */,
 				E16F6AC22B60693A1A58E39A /* Radius.swift */,
 				ECDE17B4346A1DF9B84CE8CF /* Spacing.swift */,
@@ -128,6 +151,7 @@
 				2B3F0D8C848C33638F00EF92 /* DesignSystem */,
 				BAD7A90D8B9FE44E56854BA5 /* Generated */,
 				C37E10CAFBAAFE82BCA3EEC1 /* Models */,
+				0F252D0BDF514B3607F87910 /* Resources */,
 				2ECEB97AEC9C03D9B0753E01 /* Services */,
 				635FC13D044060FA22A0F26F /* Views */,
 			);
@@ -138,11 +162,11 @@
 		422ABFFA9240D1F583859E6E /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				9CE7A8A96102D4170C3FFA74 /* DailyPickCard.swift */,
 				A4B2B8ADE8BAB132AEE6AB8A /* DogearButton.swift */,
 				3AA3C2B3FCF9D998576CAF09 /* DogearChip.swift */,
 				D644A147FCC71CC5607C8660 /* HeroReadingCard.swift */,
-				5C8D8F6448EE40BFA597CF80 /* DailyPickCard.swift */,
-				51508BB9D0324C38B648FA78 /* MidpointCheckInCard.swift */,
+				27688110D9A7D53ED3D500CF /* MidpointCheckInCard.swift */,
 				9B22962813AF30BE67878732 /* ReadingProgressSheet.swift */,
 				AE00C107C2C38F6FEE7C1E59 /* RecommendationGrid.swift */,
 				AAC7FFAC87AA1DCC75863205 /* RecommendationRowView.swift */,
@@ -162,11 +186,11 @@
 				2CDD781F4982ECA991B971D3 /* MyShelfView.swift */,
 				870E944D70CCC3F2D62DD3A9 /* OnboardingView.swift */,
 				C773F1E1E925E5A15625A1FA /* OtherViews.swift */,
-				6BB74ADF87E4451B8FF6D512 /* ProfileView.swift */,
+				ACEA4E0B0F81A8DCD44EE327 /* ProfileView.swift */,
 				D13E0C4958AB37EB52984106 /* RecommendationCard.swift */,
 				9B2F53441F920C23DB3E64A8 /* RootTabView.swift */,
+				BD7BC39D37531D2113D941A0 /* SearchView.swift */,
 				21E2C7C1C2BF4B577E773EFB /* TodayView.swift */,
-				426818A945944989AE941C3F /* SearchView.swift */,
 				2B081C5766302DCB70740F14 /* VibeSearchView.swift */,
 			);
 			path = Views;
@@ -186,6 +210,20 @@
 				C28169EC0586B53F9F89B2E7 /* Book.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		DB53D8ABDA35EC1C8C2546D8 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				2DF207C7CD84B4A0FC521840 /* Inter-Medium.ttf */,
+				4D6C25798C15364B2DBE20BA /* Inter-Regular.ttf */,
+				9E84F7171B0C1004327A3E77 /* Inter-SemiBold.ttf */,
+				1C11EED26B16B854B00895FD /* LICENSE-Inter.txt */,
+				F641CDD2C97AB4B6744156C1 /* LICENSE-PlayfairDisplay.txt */,
+				B588E6FAD31F602D9D2D5689 /* PlayfairDisplay-Bold.ttf */,
+				435668CDEC89E1A7BCBFA550 /* PlayfairDisplay-Regular.ttf */,
+			);
+			path = Fonts;
 			sourceTree = "<group>";
 		};
 		F815A74F4917F3EB1F1447A3 /* Products */ = {
@@ -257,6 +295,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0759359C84DEE65A769BA28 /* Assets.xcassets in Resources */,
+				FD36DBDF1D78A02B4BBA6532 /* Inter-Medium.ttf in Resources */,
+				6CB3280EACFBCF7BDD58B5BD /* Inter-Regular.ttf in Resources */,
+				53A9533AF89F3A60636C70D3 /* Inter-SemiBold.ttf in Resources */,
+				AB7590CFA6646125BEAF7F69 /* LICENSE-Inter.txt in Resources */,
+				D67902666B7AFEA934BA77AC /* LICENSE-PlayfairDisplay.txt in Resources */,
+				E203F5071763E42AC89F6B74 /* PlayfairDisplay-Bold.ttf in Resources */,
+				165CB9AEB70DFC6F991E9411 /* PlayfairDisplay-Regular.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -272,19 +317,19 @@
 				8FCD8147D6B79BE8AB84B7D1 /* BookCoverView.swift in Sources */,
 				9A2E852356CF2357705AD047 /* BookDetailView.swift in Sources */,
 				624820D8DCC44A562ED34F6C /* Color+Dogear.swift in Sources */,
+				B2F09D2155370C640382C78A /* DailyPickCard.swift in Sources */,
 				E1CC8ED3BDEC5EBF40F22F7D /* DogearApp.swift in Sources */,
 				6BE93F21AD3CAAAAD641295C /* DogearButton.swift in Sources */,
 				407E6592C9286CBAD23CEF2B /* DogearChip.swift in Sources */,
+				F0D4DF8300B9B5A0CF689C3A /* Haptics.swift in Sources */,
 				1662CDEAE4E315CAED701BDF /* HeroReadingCard.swift in Sources */,
-				FF00F9F6045A471F8634558E /* DailyPickCard.swift in Sources */,
-				D4ADC87927B247F6B49033B0 /* MidpointCheckInCard.swift in Sources */,
 				72F4086F52113856D4DA9D33 /* LibraryStore.swift in Sources */,
+				7647AFCCAF62124231D0319F /* MidpointCheckInCard.swift in Sources */,
 				1BA3B9778421AC55C039B087 /* Motion.swift in Sources */,
-				D13A769E327647058F564B89 /* Haptics.swift in Sources */,
 				11D82512F84BEF5AB3255AF9 /* MyShelfView.swift in Sources */,
 				58AF95D724B9D74D65C38A11 /* OnboardingView.swift in Sources */,
 				FFE1209072A046D943853A12 /* OtherViews.swift in Sources */,
-				119662F84411429EA3CC5A78 /* ProfileView.swift in Sources */,
+				B2860027F44738A670AEF97E /* ProfileView.swift in Sources */,
 				08B6C2B359DA511F8B6CF3C1 /* Radius.swift in Sources */,
 				DC163FF1CF376628C2DCC93C /* ReadingProgressSheet.swift in Sources */,
 				2922FB03A48C45097C9A4DA1 /* RecommendationCard.swift in Sources */,
@@ -292,11 +337,11 @@
 				D021A5C5C689E1989A2EEA82 /* RecommendationGrid.swift in Sources */,
 				8F787D7CF348666A90D22CA7 /* RecommendationRowView.swift in Sources */,
 				487FFA5B5A3A396C7B07F04B /* RootTabView.swift in Sources */,
+				EBA1C2763C11F1E69399CAD2 /* SearchView.swift in Sources */,
 				BE6DF395AE809B7EDDC92AA2 /* Spacing.swift in Sources */,
 				9F3E51CE439393E43F6F3524 /* StartReadingSheet.swift in Sources */,
 				C6AF9E2B67FB556AB0F7305F /* StateViews.swift in Sources */,
 				3E5267540396AB4614DC2C3F /* TodayView.swift in Sources */,
-				872E8C64026E4081812173F8 /* SearchView.swift in Sources */,
 				F2D9B3F7964F3E3ABAC6A4B6 /* Typography.swift in Sources */,
 				913D56AC3CA5AF99C819EA7E /* VibePromptField.swift in Sources */,
 				43800295D5E0B300DA3500C8 /* VibeSearchView.swift in Sources */,

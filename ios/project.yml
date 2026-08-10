@@ -26,6 +26,12 @@ targets:
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        UIAppFonts:
+          - PlayfairDisplay-Bold.ttf
+          - PlayfairDisplay-Regular.ttf
+          - Inter-Regular.ttf
+          - Inter-Medium.ttf
+          - Inter-SemiBold.ttf
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.walkerberryman.dogear

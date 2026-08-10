@@ -1,15 +1,17 @@
 import SwiftUI
 
-/// Dogear Design System 0.1, Section 04. Serif for emotional/editorial content,
-/// sans for action/state/navigation. Long body text is never italic.
+/// Dogear Design System 0.1, Section 04. Playfair Display for emotional/editorial
+/// content, Inter for action/state/navigation, per docs/brand-board.png. Long body
+/// text is never italic. Fonts are bundled (ios/Resources/Fonts) and registered via
+/// UIAppFonts in project.yml — never fall back to `.system` for these roles.
 enum DogearType {
-    static let displayXL = Font.system(size: 40, weight: .regular, design: .serif)
-    static let displayL = Font.system(size: 32, weight: .regular, design: .serif)
-    static let title = Font.system(size: 24, weight: .regular, design: .serif)
-    static let body = Font.system(size: 16, weight: .regular)
-    static let bodySmall = Font.system(size: 14, weight: .regular)
-    static let label = Font.system(size: 13, weight: .semibold)
-    static let caption = Font.system(size: 11, weight: .medium)
+    static let displayXL = Font.custom("PlayfairDisplay-Bold", size: 40)
+    static let displayL = Font.custom("PlayfairDisplay-Bold", size: 32)
+    static let title = Font.custom("PlayfairDisplay-Bold", size: 24)
+    static let body = Font.custom("Inter-Regular", size: 16)
+    static let bodySmall = Font.custom("Inter-Regular", size: 14)
+    static let label = Font.custom("Inter-SemiBold", size: 13)
+    static let caption = Font.custom("Inter-Medium", size: 11)
 
     /// Reserved for greetings, atmosphere, short reflective statements only.
     static var titleItalic: Font { title.italic() }
@@ -24,6 +26,6 @@ enum DogearType {
     /// statements per Section 04's italic-serif rule but repeat several times
     /// per screen, so full Title (24pt) reads too heavy stacked. Sits between
     /// Title and Body; flagging for formalization into the design doc.
-    static let rowLabel = Font.system(size: 18, weight: .regular, design: .serif)
+    static let rowLabel = Font.custom("PlayfairDisplay-Regular", size: 18)
     static var rowLabelItalic: Font { rowLabel.italic() }
 }
