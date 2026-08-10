@@ -158,6 +158,17 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
         defaults.set(name, forKey: readerNameKey)
     }
 
+    /// Decision #42(c): genres are no longer locked forever after onboarding
+    /// — editable from Profile. Same persistence as `completeOnboarding`,
+    /// plus a non-blocking earned refresh (decision #4) so Today's picks
+    /// actually reflect the changed taste signal rather than the edit being
+    /// cosmetic.
+    func updateOnboardingGenres(_ genres: Set<Genre>) {
+        onboardingGenres = genres
+        defaults.set(genres.map { $0.rawValue }, forKey: onboardingGenresKey)
+        Task { await performRefresh(blocking: false) }
+    }
+
     // MARK: - Adding + starting books
 
     /// `reason` is the original recommendation reasoning, when the caller has

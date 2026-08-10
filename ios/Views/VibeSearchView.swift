@@ -59,26 +59,47 @@ struct VibeSearchView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollViewReader { proxy in
+            // Decision #42(a): "What are you in the mood for?" must be the
+            // literal topmost element — no nav-bar chrome above it. Same
+            // hidden-nav-bar + in-content-header pattern already used by
+            // Today and Profile.
+            GeometryReader { geo in
                 ScrollView {
                     // Brand board order: large headline, then the 5 prompt
-                    // bubbles, then the free-text field at the bottom —
-                    // reordered from the field-then-example layout this used
-                    // to have.
+                    // bubbles centered in the middle of the screen, then the
+                    // free-text field pinned at the bottom (outside the
+                    // scroll content, via `.safeAreaInset` below) — reordered
+                    // from the field-then-example layout this used to have.
                     VStack(alignment: .leading, spacing: DogearSpacing.space6) {
                         header
                         if !hasSearched && !isSearching {
+                            Spacer(minLength: DogearSpacing.space8)
                             promptBubbles
+                            Spacer(minLength: DogearSpacing.space8)
                         }
-                        promptField
-                            .id("promptField")
-                        content(scrollProxy: proxy)
+                        content
                     }
-                    .padding(.vertical, DogearSpacing.space6)
+                    .padding(.top, DogearSpacing.space5)
+                    .padding(.bottom, DogearSpacing.space6)
+                    // Stretches the VStack to fill the visible screen so the
+                    // Spacers above can actually center the bubbles in the
+                    // middle section when there's nothing else on screen yet
+                    // — without this, Spacers inside a ScrollView do nothing.
+                    .frame(minHeight: geo.size.height, alignment: .top)
                 }
             }
             .background(DogearColor.paper)
-            .navigationTitle("Vibe search")
+            .toolbar(.hidden, for: .navigationBar)
+            // Decision #42(a): the field shrinks and lives here — pinned to
+            // the bottom of the screen at all times, not just the last item
+            // scrolled past in the content VStack above.
+            .safeAreaInset(edge: .bottom) {
+                promptField
+                    .padding(.horizontal, DogearSpacing.space5)
+                    .padding(.top, DogearSpacing.space3)
+                    .padding(.bottom, DogearSpacing.space2)
+                    .background(DogearColor.paper)
+            }
             // TIMING instrumentation for the reported keyboard-appear delay —
             // the rotating-timer-pause fix went in unverified last round.
             // Rather than guess again, this logs real timestamps for the
@@ -104,7 +125,8 @@ struct VibeSearchView: View {
         }
     }
 
-    /// Brand board: large serif headline alone, no small caption above it.
+    /// Brand board: large serif headline alone, no small caption above it —
+    /// and now, per decision #42(a), nothing but the safe area above it either.
     private var header: some View {
         Text("What are you in the mood for?")
             .font(DogearType.displayL).italic()
@@ -114,11 +136,14 @@ struct VibeSearchView: View {
 
     private var promptField: some View {
         VibePromptField(mode: .editable(text: $query, isFocused: $fieldFocused, onSubmit: search))
-            .padding(.horizontal, DogearSpacing.space5)
     }
 
+    /// Decision #42(a): real vertical spacing between bubbles (space4, not
+    /// the tight space2 this used to have) — and now positioned in the
+    /// middle of the screen (see the Spacers around this in `body`) rather
+    /// than clustered directly under the header.
     private var promptBubbles: some View {
-        VStack(spacing: DogearSpacing.space2) {
+        VStack(spacing: DogearSpacing.space4) {
             ForEach(visiblePrompts) { prompt in
                 Button {
                     query = prompt.text
@@ -159,14 +184,14 @@ struct VibeSearchView: View {
     }
 
     @ViewBuilder
-    private func content(scrollProxy: ScrollViewProxy) -> some View {
+    private var content: some View {
         if isSearching && results.isEmpty {
             LoadingStateView(message: "Finding books for that vibe…")
         } else if searchFailed && results.isEmpty {
             ErrorStateView(message: "Couldn't reach your library's brain.", action: retry)
         } else if !results.isEmpty {
             VStack(alignment: .leading, spacing: DogearSpacing.space5) {
-                queryQuote(scrollProxy: scrollProxy)
+                queryQuote
                 if searchFailed {
                     InlineRetryBanner(message: "Couldn't apply that refinement.", action: retry)
                 } else if isSearching {
@@ -207,14 +232,13 @@ struct VibeSearchView: View {
     /// Design System 0.1 Section 13: "Keep the original query visible as an
     /// editable editorial quote." Sits right above the results so a reader
     /// browsing a full grid doesn't have to scroll back to the top of the
-    /// screen to refine or start over — tapping it jumps back to the real
-    /// field and focuses it (decision: only one actual text box exists per
-    /// #13, this is a shortcut back to it, not a second input).
-    private func queryQuote(scrollProxy: ScrollViewProxy) -> some View {
+    /// screen to refine or start over — tapping it focuses the real field
+    /// (decision: only one actual text box exists per #13, this is a
+    /// shortcut back to it, not a second input). No scroll-to-top needed
+    /// since decision #42(a) pinned the field to the bottom of the screen
+    /// at all times via `.safeAreaInset` — it's already on screen.
+    private var queryQuote: some View {
         Button {
-            withAnimation(DogearMotion.standard) {
-                scrollProxy.scrollTo("promptField", anchor: .top)
-            }
             fieldFocused = true
         } label: {
             HStack(spacing: DogearSpacing.space3) {

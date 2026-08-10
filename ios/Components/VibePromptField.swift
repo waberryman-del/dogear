@@ -70,7 +70,12 @@ struct VibePromptField: View {
         }
         .padding(.horizontal, DogearSpacing.space4)
         .padding(.vertical, DogearSpacing.space3)
-        .frame(minHeight: 56)
+        // Decision #42(a): real-device testing found this oversized — the
+        // Design System's own spec ("minimum height 56pt collapsed; grows to
+        // 120pt for multiline") only ever had the minHeight half enforced
+        // here. No maxHeight meant nothing actually capped growth at 120,
+        // letting it balloon past the spec on longer queries.
+        .frame(minHeight: 56, maxHeight: 120)
         .background(DogearColor.linen)
         .clipShape(RoundedRectangle(cornerRadius: DogearRadius.control))
         .overlay(

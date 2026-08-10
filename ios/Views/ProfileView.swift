@@ -7,6 +7,10 @@ import SwiftUI
 /// `LibraryEntry`/onboarding state actually allow.
 struct ProfileView: View {
     @EnvironmentObject var library: LibraryStore
+    // Decision #42(c): genres are editable here now, not locked forever
+    // after onboarding — this sheet reuses the same chip-picker pattern
+    // OnboardingView already established for the exact same choice.
+    @State private var showingGenreEditor = false
 
     var body: some View {
         NavigationStack {
@@ -20,6 +24,11 @@ struct ProfileView: View {
             }
             .background(DogearColor.paper)
             .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showingGenreEditor) {
+                GenreEditSheet(initialSelection: library.onboardingGenres) { updated in
+                    library.updateOnboardingGenres(updated)
+                }
+            }
         }
     }
 
@@ -30,15 +39,24 @@ struct ProfileView: View {
             .padding(.horizontal, DogearSpacing.space5)
     }
 
+    /// Decision #42(c): expanded beyond decision #28's original two tiles
+    /// (finished count + streak) to also surface currently-reading and
+    /// want-to-read counts — still computed only from data that already
+    /// exists (`LibraryEntry.status`), no new activity log added.
     private var statsSection: some View {
         VStack(alignment: .leading, spacing: DogearSpacing.space3) {
             Text("READING STATS")
                 .font(DogearType.caption).tracking(1.5)
                 .foregroundStyle(DogearColor.brass)
                 .padding(.horizontal, DogearSpacing.space5)
-            HStack(spacing: DogearSpacing.space3) {
+            LazyVGrid(
+                columns: [GridItem(.flexible()), GridItem(.flexible())],
+                spacing: DogearSpacing.space3
+            ) {
                 statTile(value: "\(finishedCount)", label: finishedCount == 1 ? "book finished" : "books finished")
                 statTile(value: "\(currentStreak)", label: currentStreak == 1 ? "day streak" : "day streak")
+                statTile(value: "\(currentlyReadingCount)", label: "currently reading")
+                statTile(value: "\(wantToReadCount)", label: "want to read")
             }
             .padding(.horizontal, DogearSpacing.space5)
         }
@@ -83,16 +101,27 @@ struct ProfileView: View {
                         .autocorrectionDisabled()
                 }
                 Divider()
-                HStack {
-                    Text("Onboarding genres")
-                        .font(DogearType.bodySmall)
-                        .foregroundStyle(DogearColor.ink)
-                    Spacer()
-                    Text(genresSummary)
-                        .font(DogearType.bodySmall)
-                        .foregroundStyle(DogearColor.mutedInk)
-                        .multilineTextAlignment(.trailing)
+                // Decision #42(c): editable now, not locked forever after
+                // onboarding — tapping opens the same chip picker used at
+                // onboarding, pre-filled with the current selection.
+                Button {
+                    showingGenreEditor = true
+                } label: {
+                    HStack {
+                        Text("Onboarding genres")
+                            .font(DogearType.bodySmall)
+                            .foregroundStyle(DogearColor.ink)
+                        Spacer()
+                        Text(genresSummary)
+                            .font(DogearType.bodySmall)
+                            .foregroundStyle(DogearColor.mutedInk)
+                            .multilineTextAlignment(.trailing)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .foregroundStyle(DogearColor.mutedInk)
+                    }
                 }
+                .buttonStyle(.plain)
                 Divider()
                 HStack {
                     Text("Version")
@@ -113,6 +142,14 @@ struct ProfileView: View {
 
     private var finishedCount: Int {
         library.entries.filter { $0.status == .finished }.count
+    }
+
+    private var currentlyReadingCount: Int {
+        library.entries.filter { $0.status == .reading }.count
+    }
+
+    private var wantToReadCount: Int {
+        library.entries.filter { $0.status == .wantToRead }.count
     }
 
     /// Consecutive local-calendar days (working backward from today) with
@@ -155,5 +192,70 @@ struct ProfileView: View {
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+    }
+}
+
+/// Decision #42(c): reuses `OnboardingView`'s exact chip-picker pattern (same
+/// max-5 rule, same `DogearChip` component) for editing genres after the
+/// fact, rather than inventing a second picker UI for the same choice.
+private struct GenreEditSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var selected: Set<Genre>
+    let onSave: (Set<Genre>) -> Void
+
+    private let maxSelectable = 5
+    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 10)]
+
+    init(initialSelection: Set<Genre>, onSave: @escaping (Set<Genre>) -> Void) {
+        _selected = State(initialValue: initialSelection)
+        self.onSave = onSave
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Pick up to \(maxSelectable) — we'll use these to shape your recommendations.")
+                    .font(.subheadline)
+                    .foregroundStyle(DogearColor.mutedInk)
+                    .padding(.horizontal)
+                    .padding(.top)
+
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(Genre.allCases) { genre in
+                            genreChip(genre)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+
+                DogearButton(title: "Save", isDisabled: selected.isEmpty) {
+                    onSave(selected)
+                    dismiss()
+                }
+                .padding(.horizontal)
+                .padding(.bottom)
+            }
+            .background(DogearColor.paper.ignoresSafeArea())
+            .navigationTitle("Your genres")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func genreChip(_ genre: Genre) -> some View {
+        let isSelected = selected.contains(genre)
+        return DogearChip(label: genre.rawValue, isSelected: isSelected) {
+            if isSelected {
+                selected.remove(genre)
+            } else if selected.count < maxSelectable {
+                selected.insert(genre)
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
