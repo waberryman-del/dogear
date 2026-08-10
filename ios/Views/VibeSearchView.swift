@@ -63,42 +63,50 @@ struct VibeSearchView: View {
             // literal topmost element — no nav-bar chrome above it. Same
             // hidden-nav-bar + in-content-header pattern already used by
             // Today and Profile.
-            GeometryReader { geo in
-                ScrollView {
-                    // Brand board order: large headline, then the 5 prompt
-                    // bubbles centered in the middle of the screen, then the
-                    // free-text field pinned at the bottom (outside the
-                    // scroll content, via `.safeAreaInset` below) — reordered
-                    // from the field-then-example layout this used to have.
-                    VStack(alignment: .leading, spacing: DogearSpacing.space6) {
-                        header
-                        if !hasSearched && !isSearching {
-                            Spacer(minLength: DogearSpacing.space8)
-                            promptBubbles
-                            Spacer(minLength: DogearSpacing.space8)
-                        }
-                        content
+            ScrollView {
+                // Decision #42(a), round 4 — CONFIRMED on a real device via
+                // pixel measurement, not eyeballing: the round-3 fix (drop
+                // the Spacers, keep the field permanently pinned via
+                // `.safeAreaInset`) actually made the gap BELOW the bubbles
+                // *worse* (measured ~95pt before → ~198pt after) — with no
+                // Spacer left to split the ScrollView's leftover space
+                // between "above" and "below," it all collected below the
+                // short entry-state content instead, since a pinned
+                // safeAreaInset field sits at the literal bottom of the
+                // screen regardless of how little content is above it. Fix:
+                // only pin the field via `.safeAreaInset` once there's real,
+                // potentially-long scrollable content to protect it from
+                // (the results/searching states) — see `isEntryState` below.
+                // In the entry state, the field renders in-line right after
+                // the bubbles instead, so the whole header+bubbles+field
+                // block sits together in natural reading flow near the top,
+                // with nothing artificially pinned to the bottom of a
+                // mostly-empty screen.
+                VStack(alignment: .leading, spacing: DogearSpacing.space6) {
+                    header
+                    if isEntryState {
+                        promptBubbles
+                        promptField
+                            .padding(.horizontal, DogearSpacing.space5)
                     }
-                    .padding(.top, DogearSpacing.space5)
-                    .padding(.bottom, DogearSpacing.space6)
-                    // Stretches the VStack to fill the visible screen so the
-                    // Spacers above can actually center the bubbles in the
-                    // middle section when there's nothing else on screen yet
-                    // — without this, Spacers inside a ScrollView do nothing.
-                    .frame(minHeight: geo.size.height, alignment: .top)
+                    content
                 }
+                .padding(.top, DogearSpacing.space5)
+                .padding(.bottom, DogearSpacing.space6)
             }
             .background(DogearColor.paper)
             .toolbar(.hidden, for: .navigationBar)
-            // Decision #42(a): the field shrinks and lives here — pinned to
-            // the bottom of the screen at all times, not just the last item
-            // scrolled past in the content VStack above.
+            // Pinned only once there's real (potentially long) content to
+            // scroll through — a results grid could otherwise push the field
+            // far off-screen. Not needed in the entry state (see above).
             .safeAreaInset(edge: .bottom) {
-                promptField
-                    .padding(.horizontal, DogearSpacing.space5)
-                    .padding(.top, DogearSpacing.space3)
-                    .padding(.bottom, DogearSpacing.space2)
-                    .background(DogearColor.paper)
+                if !isEntryState {
+                    promptField
+                        .padding(.horizontal, DogearSpacing.space5)
+                        .padding(.top, DogearSpacing.space3)
+                        .padding(.bottom, DogearSpacing.space2)
+                        .background(DogearColor.paper)
+                }
             }
             // TIMING instrumentation for the reported keyboard-appear delay —
             // the rotating-timer-pause fix went in unverified last round.
@@ -138,11 +146,18 @@ struct VibeSearchView: View {
         VibePromptField(mode: .editable(text: $query, isFocused: $fieldFocused, onSubmit: search))
     }
 
+    /// True before any search has happened — the "What are you in the mood
+    /// for?" + bubbles + field screen, as opposed to a results grid.
+    private var isEntryState: Bool {
+        !hasSearched && !isSearching
+    }
+
     /// Decision #42(a), round 2: the first attempt (space4 = 16pt) still read
     /// as clustered on a real device — bumped to space6 (24pt), inside the
-    /// 24-32pt range real-device testing called for. Positioned in the
-    /// middle of the screen (see the Spacers around this in `body`) rather
-    /// than clustered directly under the header.
+    /// 24-32pt range real-device testing called for. Round 4: sits in normal
+    /// reading flow right after the header (the VStack's own fixed spacing
+    /// in `body` provides that gap) rather than being centered in leftover
+    /// screen space.
     private var promptBubbles: some View {
         VStack(spacing: DogearSpacing.space6) {
             ForEach(visiblePrompts) { prompt in

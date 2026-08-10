@@ -517,7 +517,19 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       above and the field below — the bubbles should sit in natural
       reading flow shortly after the headline, not be mathematically
       centered in the remaining screen space. Reduce both the gap above
-      the bubble stack and the gap below it before the field.
+      the bubble stack and the gap below it before the field. **[Further
+      correction #2 — grouping bubbles+field together with a tight gap
+      fixed the internal spacing, but pushed ALL leftover screen space
+      below the group as one large empty void — reads just as wrong as
+      the original problem.]** Keep the headline pinned at the top
+      (already confirmed correct, don't touch). Below it, treat
+      bubbles+field as ONE fixed-spacing block (same tight internal gap,
+      not stretched) and center THAT WHOLE BLOCK within the remaining
+      vertical space below the headline — `Spacer()` before and after the
+      block as a unit, not between its internal elements. This balances
+      empty space evenly above and below the block instead of collecting
+      it all in one place, while keeping the block's own internal spacing
+      fixed and tight.
     - **(d) Verify onboarding genre selection only ever happens once.**
       Per decision 1, this should never re-appear after first launch.
       Confirm `hasCompletedOnboarding` is being read and persisted
