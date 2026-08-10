@@ -471,6 +471,14 @@ export default async function handler(req, res) {
 
     const rowBuckets = dedupedRows.map(() => []);
     enrichedFlat.forEach((enriched, i) => {
+      // Decision #41(d): skip rather than surface a critically incomplete match.
+      if (hasNoRealContent(enriched.book)) {
+        console.log(
+          `decision 41(d): dropping "${enriched.book.title}" by ${enriched.book.author} — ` +
+          `no cover and no summary, treating as a failed lookup`
+        );
+        return;
+      }
       rowBuckets[flat[i].rowIndex].push(enriched);
     });
 
@@ -543,6 +551,15 @@ const BUNDLE_OR_GUIDE_PATTERNS = [
 function isBundleOrGuideMatch(title, categories) {
   const haystack = [title, ...(categories ?? [])].filter(Boolean).join(" ");
   return BUNDLE_OR_GUIDE_PATTERNS.some((re) => re.test(haystack));
+}
+
+// CLAUDE.md decision #41(d): no cover art AND no synopsis/summary at all is a
+// strong signal the match itself is bad (a junk/bundle match that slipped
+// past the decision #40 filter above) — treat it as a failed lookup, not a
+// valid result, rather than surfacing a broken-looking card with nothing real
+// to show.
+function hasNoRealContent(book) {
+  return !book.coverURL && !book.summary;
 }
 
 async function lookupBook(title, author) {

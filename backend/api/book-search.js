@@ -82,6 +82,14 @@ function isBundleOrGuideMatch(title, categories) {
   return BUNDLE_OR_GUIDE_PATTERNS.some((re) => re.test(haystack));
 }
 
+// CLAUDE.md decision #41(d): no cover art AND no synopsis/summary at all is a
+// strong signal the match itself is bad (a junk/bundle match that slipped
+// past the decision #40 filter above) — drop it from the results list rather
+// than showing the reader a broken-looking card with nothing real on it.
+function hasNoRealContent(book) {
+  return !book.coverURL && !book.summary;
+}
+
 async function searchGoogleBooks(query) {
   const key = process.env.GOOGLE_BOOKS_API_KEY;
   const keyParam = key ? `&key=${key}` : "";
@@ -109,7 +117,9 @@ async function searchGoogleBooks(query) {
           summary: info.description ?? null,
           publicationYear: parsePublicationYear(info.publishedDate),
         };
-      });
+      })
+      // Decision #41(d): skip rather than surface a critically incomplete match.
+      .filter((book) => !hasNoRealContent(book));
   } catch (err) {
     console.error("Google Books search fetch failed:", query, err?.message);
     return [];
@@ -134,7 +144,9 @@ async function searchOpenLibrary(query) {
         genres: doc.subject?.slice(0, 3) ?? [],
         summary: null,
         publicationYear: doc.first_publish_year ?? null,
-      }));
+      }))
+      // Decision #41(d): skip rather than surface a critically incomplete match.
+      .filter((book) => !hasNoRealContent(book));
   } catch (err) {
     console.error("Open Library search failed:", query, err?.message);
     return [];

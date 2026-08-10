@@ -15,11 +15,14 @@ struct BookDetailView: View {
     @State private var verdict: String?
     @State private var recognition: String?
     // Decision #40: the cleaned synopsis comes from the same call as verdict/
-    // recognition. Per decision #36, this never gets its own loading state —
-    // `book.summary` (raw source text) renders here immediately, then this
-    // silently swaps in once the call resolves (see `synopsisSection`).
+    // recognition. Decision #41(a)/(b): recognition + synopsis are always
+    // pending from that one call regardless of whether `reason` already gave
+    // us a verdict, and must reveal together, once, when it resolves —
+    // `isLoadingDetails` below gates both, and neither renders any interim
+    // content (raw `book.summary` included) before then.
     @State private var synopsis: String?
     @State private var isLoadingVerdict: Bool
+    @State private var isLoadingDetails = true
     @State private var showingProgressSheet = false
     @State private var showingPlacementPicker = false
 
@@ -62,10 +65,14 @@ struct BookDetailView: View {
         }
         .task(id: book.id) {
             let result = await library.verdictAndRecognition(for: book, existingReason: reason)
+            // Decision #41(a): assign all three together, in one pass, so the
+            // view re-renders once with everything that just became available
+            // — never a verdict-then-recognition-then-synopsis stagger.
             verdict = result.verdict
             recognition = result.recognition
             synopsis = result.synopsis
             isLoadingVerdict = false
+            isLoadingDetails = false
         }
         .confirmationDialog(
             "Place on a shelf", isPresented: $showingPlacementPicker, titleVisibility: .visible
@@ -180,25 +187,56 @@ struct BookDetailView: View {
 
     // MARK: - 4. Recognition (decision #39.4, best-effort)
 
+    /// Decision #41(c): render as a bulleted list once there's more than one
+    /// distinct fact — split on sentence boundaries since the backend returns
+    /// a single string (`recognition.js`'s response contract), not an array.
+    /// A single fact stays as plain prose; splitting one sentence would just
+    /// produce a lone, pointless bullet.
+    private func recognitionFacts(_ recognition: String) -> [String] {
+        recognition
+            .split(separator: ".")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
     private func recognitionSection(_ recognition: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let facts = recognitionFacts(recognition)
+        return VStack(alignment: .leading, spacing: 6) {
             Text("RECOGNITION")
                 .font(DogearType.caption).tracking(1.5)
                 .foregroundStyle(DogearColor.brass)
-            Text(recognition)
-                .font(DogearType.body)
-                .foregroundStyle(DogearColor.ink)
+            if facts.count > 1 {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(facts, id: \.self) { fact in
+                        HStack(alignment: .top, spacing: 6) {
+                            Text("\u{2022}")
+                                .foregroundStyle(DogearColor.brass)
+                            Text(fact + ".")
+                                .font(DogearType.body)
+                                .foregroundStyle(DogearColor.ink)
+                        }
+                    }
+                }
+            } else {
+                Text(recognition)
+                    .font(DogearType.body)
+                    .foregroundStyle(DogearColor.ink)
+            }
         }
     }
 
     // MARK: - 5. Synopsis (decision #38 fallback, decision #40 cleanup)
 
-    /// Decision #40: the AI-cleaned synopsis replaces raw source text once
-    /// it's available. Per decision #36 this section never blocks on that
-    /// call — `book.summary` (the raw, possibly-messy source text) renders
-    /// immediately and this silently upgrades to the cleaned version in
-    /// place when the call resolves. Decision #38's fallback line only shows
-    /// when neither is available.
+    /// Decision #41(b): raw `book.summary` must never render as a stand-in
+    /// for the cleaned synopsis while it's still generating — that's exactly
+    /// the bait-and-switch real testing caught (a visible swap once the call
+    /// resolves). While `isLoadingDetails` is true, `synopsisSection` shows a
+    /// contained loading placeholder instead, same treatment as the verdict.
+    /// Only once loading has genuinely finished does raw `book.summary`
+    /// become a legitimate *permanent* fallback — for when the call failed
+    /// outright and there's nothing cleaned to show — since at that point
+    /// it's the final state, not something that's about to swap out from
+    /// under the reader.
     private var synopsisText: String? {
         if let synopsis, !synopsis.isEmpty { return synopsis }
         if let summary = book.summary, !summary.isEmpty { return summary }
@@ -210,9 +248,18 @@ struct BookDetailView: View {
             Text("SYNOPSIS")
                 .font(DogearType.caption).tracking(1.5)
                 .foregroundStyle(DogearColor.brass)
-            Text(synopsisText ?? "No synopsis available for this edition.")
-                .font(DogearType.body)
-                .foregroundStyle(synopsisText != nil ? DogearColor.ink : DogearColor.mutedInk)
+            if isLoadingDetails {
+                HStack(spacing: DogearSpacing.space2) {
+                    ProgressView()
+                    Text("Preparing a synopsis…")
+                        .font(DogearType.bodySmall)
+                        .foregroundStyle(DogearColor.mutedInk)
+                }
+            } else {
+                Text(synopsisText ?? "No synopsis available for this edition.")
+                    .font(DogearType.body)
+                    .foregroundStyle(synopsisText != nil ? DogearColor.ink : DogearColor.mutedInk)
+            }
         }
     }
 

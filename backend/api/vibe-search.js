@@ -340,7 +340,7 @@ export default async function handler(req, res) {
       }
     }
 
-    const enriched = await mapWithConcurrency(
+    const enrichedAll = await mapWithConcurrency(
       finalResults,
       LOOKUP_CONCURRENCY,
       async (rec) => ({
@@ -350,6 +350,17 @@ export default async function handler(req, res) {
         backfilled: rec.backfilled === true,
       })
     );
+    // Decision #41(d): skip rather than surface a critically incomplete match.
+    const enriched = enrichedAll.filter(({ book }) => {
+      if (hasNoRealContent(book)) {
+        console.log(
+          `decision 41(d): dropping "${book.title}" by ${book.author} — ` +
+          `no cover and no summary, treating as a failed lookup`
+        );
+        return false;
+      }
+      return true;
+    });
 
     return res.status(200).json({
       results: enriched,
@@ -407,6 +418,15 @@ const BUNDLE_OR_GUIDE_PATTERNS = [
 function isBundleOrGuideMatch(title, categories) {
   const haystack = [title, ...(categories ?? [])].filter(Boolean).join(" ");
   return BUNDLE_OR_GUIDE_PATTERNS.some((re) => re.test(haystack));
+}
+
+// CLAUDE.md decision #41(d): no cover art AND no synopsis/summary at all is a
+// strong signal the match itself is bad (a junk/bundle match that slipped
+// past the decision #40 filter above) — treat it as a failed lookup, not a
+// valid result, rather than surfacing a broken-looking card with nothing real
+// to show.
+function hasNoRealContent(book) {
+  return !book.coverURL && !book.summary;
 }
 
 // Same two-source metadata pattern as recommend.js: Google Books first (needs
