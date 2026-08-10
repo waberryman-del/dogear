@@ -496,6 +496,35 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       corner, title text) should appear immediately, with the real image
       swapping in once loaded asynchronously — this is a regression from
       or gap in that existing pattern, not new work.
+42. **[Batch — real device findings + new scope, one consolidated pass]**
+    - **(a) Vibe Search entry screen layout correction.** "What are you in
+      the mood for?" must be the literal topmost element on screen — no
+      header or nav content above it. The 5 rotating prompt bubbles get
+      real vertical spacing between them, positioned in the middle section
+      of the screen, not tightly clustered. The free-text input field
+      shrinks — it's currently oversized — and anchors at the bottom.
+      Current design tokens only, brand board's exact palette is still
+      Phase 4 (decision 23) — this is a layout/sizing correction, not a
+      visual identity change.
+    - **(b) Shelf tab unification.** All five categories — Currently
+      Reading, Want to Read, Keep Forever, Glad I Read It, Should've
+      Stopped — become tappable shelf tiles showing a book count each,
+      drilled into to see the actual book list, replacing the current
+      single long inline-sections layout (decision 30's content is
+      unchanged, just the navigation pattern). Same rule as above: build
+      this well with current tokens, the brand board's exact shelf art is
+      still Phase 4 — this is a real navigation/structure improvement, not
+      a jump ahead on visual identity.
+    - **(c) Profile made genuinely functional.** Beyond decision 28's
+      original minimal scope (name + basic stats), add: total books
+      finished, currently-reading count, want-to-read count, and the
+      genres chosen at onboarding — editable here, not locked forever
+      after onboarding. Real substance, still no feature bloat beyond
+      this.
+    - Decisions 40/41 (database quality, atomic loading, no bait-and-
+      switch) are already implemented from the prior round — not new work,
+      but included in this same round's final real-device verification
+      pass rather than a separate one.
 
 ## Design identity
 - **Palette**: unchanged from the earlier prototype and still the right call — deep
