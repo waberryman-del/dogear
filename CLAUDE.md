@@ -554,7 +554,21 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       fixed pixel value. Also: reduce the text field's internal padding —
       a single short placeholder line currently looks lost inside an
       oversized box; the box should feel proportionate to what's actually
-      inside it at rest.
+      inside it at rest. **[Step back after 4 rounds of spacing
+      corrections — the actual problem was trying to make content fill
+      the whole screen, not the spacing math itself.]** Real UX research
+      on this pattern (ChatGPT's blank-state suggestions, Apple's own
+      "Suggested" screens, Spotify's mood pickers) points to a simpler,
+      calmer answer: **show 3 prompts, not 5** — a curated few reads as
+      helpful suggestions, not a list to evaluate, and is far less prone
+      to feeling crowded regardless of spacing. (The underlying rotating
+      pool of ~12 prompts stays — just 3 visible at once, not 5.) **Stop
+      trying to stretch content to fill available height entirely** —
+      comfortable, fixed spacing after the header, let the block end
+      naturally. The gap before the bottom-anchored field does NOT need
+      to be eliminated or perfectly balanced — calm, generous whitespace
+      there is correct, intentional design, not a bug. This replaces the
+      flexible-spacing approach from correction #4.
     - **(d) Verify onboarding genre selection only ever happens once.**
       Per decision 1, this should never re-appear after first launch.
       Confirm `hasCompletedOnboarding` is being read and persisted

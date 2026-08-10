@@ -66,8 +66,15 @@ struct VibePromptField: View {
 
             submitArrow(action: { triggerSubmit(onSubmit) }, disabled: isEmpty)
         }
-        .padding(.horizontal, DogearSpacing.space4)
-        .padding(.vertical, DogearSpacing.space3)
+        // Decision #42(a), correction #4: a single short placeholder line
+        // looked lost inside this box — tightened from space4/space3
+        // (16/12pt) to space3/space2 (12/8pt) so the box reads proportionate
+        // to what's actually inside it at rest. The 40pt submit arrow (not
+        // this padding) is what sets the real height floor, so this now
+        // collapses to ~56pt — exactly the Design System's original
+        // "minimum height 56pt collapsed" target.
+        .padding(.horizontal, DogearSpacing.space3)
+        .padding(.vertical, DogearSpacing.space2)
         // Decision #42(a), round 3 — CONFIRMED via real-build A/B testing on
         // a simulator (measured pixel height at each step, not guessed):
         // round 1 added `.frame(minHeight: 56, maxHeight: 120)` but left

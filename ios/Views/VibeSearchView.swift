@@ -63,26 +63,41 @@ struct VibeSearchView: View {
             // literal topmost element — no nav-bar chrome above it. Same
             // hidden-nav-bar + in-content-header pattern already used by
             // Today and Profile.
-            ScrollView {
-                // Decision #42(a), correction #3 — real product clarification
-                // after seeing it live: bubbles and the field are two
-                // separate things, not one grouped/centered unit (that was
-                // wrong from round 5). The field is a TRUE, independent
-                // bottom anchor (see `.safeAreaInset` below) — it doesn't
-                // care where the bubbles are. The bubbles sit in normal flow
-                // right after the header; they now fill the real middle
-                // space themselves via bigger size + spacing (see
-                // `promptBubbles`) rather than needing GeometryReader/Spacer
-                // centering tricks to look intentional.
-                VStack(alignment: .leading, spacing: DogearSpacing.space6) {
-                    header
-                    if isEntryState {
-                        promptBubbles
+            GeometryReader { geo in
+                ScrollView {
+                    // Decision #42(a), correction #3: bubbles and the field
+                    // are two separate things, not one grouped/centered unit
+                    // — the field is a TRUE, independent bottom anchor (see
+                    // `.safeAreaInset` below).
+                    //
+                    // Correction #4: fixed inter-bubble spacing still left an
+                    // uneven, top-heavy result (bubbles clustered right after
+                    // the header, one big gap before the field on taller
+                    // screens) — fixed values don't adapt to available space.
+                    // `promptBubbles` now uses `Spacer(minLength:)` *between*
+                    // each bubble instead of a fixed `spacing:`, which makes
+                    // that VStack inherently flexible/growable — SwiftUI
+                    // hands leftover height to the most flexible child, so
+                    // once `frame(minHeight: geo.size.height)` below gives
+                    // this outer VStack more room than its natural size,
+                    // that extra room flows into `promptBubbles`'s internal
+                    // Spacers rather than piling up as blank space after it.
+                    // `geo.size.height` already excludes the field's pinned
+                    // safe-area region (that reservation happens via the
+                    // `.safeAreaInset` below, outside this GeometryReader),
+                    // so this fills exactly the header-to-field gap, robust
+                    // to screen size — no manually-tuned pixel value.
+                    VStack(alignment: .leading, spacing: DogearSpacing.space6) {
+                        header
+                        if isEntryState {
+                            promptBubbles
+                        }
+                        content
                     }
-                    content
+                    .padding(.top, DogearSpacing.space5)
+                    .padding(.bottom, DogearSpacing.space6)
+                    .frame(minHeight: geo.size.height, alignment: .top)
                 }
-                .padding(.top, DogearSpacing.space5)
-                .padding(.bottom, DogearSpacing.space6)
             }
             .background(DogearColor.paper)
             .toolbar(.hidden, for: .navigationBar)
@@ -145,36 +160,24 @@ struct VibeSearchView: View {
         !hasSearched && !isSearching
     }
 
-    /// Decision #42(a), correction #3: no longer trying to *position* the
-    /// bubbles into the middle of the screen via external centering — they
-    /// now genuinely occupy that space themselves, via bigger bubbles
-    /// (space5/20pt vertical padding, up from space3/12pt) and more room
-    /// between them (space8/32pt, up from space6/24pt). Plain natural flow
-    /// right after the header, no Spacer/GeometryReader involved.
+    /// Decision #42(a), correction #3: bigger bubbles — space5/20pt vertical
+    /// padding, up from space3/12pt — so each one feels substantial rather
+    /// than a thin tight row.
+    ///
+    /// Correction #4: the gaps *between* bubbles are `Spacer(minLength:)`
+    /// now, not a fixed `spacing:` value — this VStack is the flexible
+    /// element `body`'s `frame(minHeight:)` hands leftover space to, so the
+    /// whole stack stretches to genuinely fill the header-to-field gap,
+    /// distributing extra room evenly across every gap instead of leaving it
+    /// all in one place. `minLength` is the floor (never tighter than this,
+    /// even with zero extra room), not the normal resting gap.
     private var promptBubbles: some View {
-        VStack(spacing: DogearSpacing.space8) {
-            ForEach(visiblePrompts) { prompt in
-                Button {
-                    query = prompt.text
-                    search()
-                } label: {
-                    HStack(spacing: DogearSpacing.space3) {
-                        Image(systemName: prompt.icon)
-                            .font(.system(size: 15))
-                            .foregroundStyle(DogearColor.brass)
-                            .frame(width: 20)
-                        Text(prompt.text)
-                            .font(DogearType.body)
-                            .foregroundStyle(DogearColor.ink)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, DogearSpacing.space5)
-                    .padding(.vertical, DogearSpacing.space5)
-                    .frame(maxWidth: .infinity)
-                    .background(DogearColor.linen)
-                    .clipShape(RoundedRectangle(cornerRadius: DogearRadius.control))
+        VStack(spacing: 0) {
+            ForEach(Array(visiblePrompts.enumerated()), id: \.element.id) { index, prompt in
+                bubbleButton(prompt)
+                if index < visiblePrompts.count - 1 {
+                    Spacer(minLength: DogearSpacing.space6)
                 }
-                .buttonStyle(DogearPressStyle())
             }
         }
         .padding(.horizontal, DogearSpacing.space5)
@@ -190,6 +193,30 @@ struct VibeSearchView: View {
                 visiblePrompts = Array(Self.promptPool.shuffled().prefix(5))
             }
         }
+    }
+
+    private func bubbleButton(_ prompt: VibePromptSuggestion) -> some View {
+        Button {
+            query = prompt.text
+            search()
+        } label: {
+            HStack(spacing: DogearSpacing.space3) {
+                Image(systemName: prompt.icon)
+                    .font(.system(size: 15))
+                    .foregroundStyle(DogearColor.brass)
+                    .frame(width: 20)
+                Text(prompt.text)
+                    .font(DogearType.body)
+                    .foregroundStyle(DogearColor.ink)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, DogearSpacing.space5)
+            .padding(.vertical, DogearSpacing.space5)
+            .frame(maxWidth: .infinity)
+            .background(DogearColor.linen)
+            .clipShape(RoundedRectangle(cornerRadius: DogearRadius.control))
+        }
+        .buttonStyle(DogearPressStyle())
     }
 
     @ViewBuilder
