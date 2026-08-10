@@ -15,6 +15,7 @@
 // comment is the naming-debt marker for a future quieter pass.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { checkRateLimit } from "../lib/rateLimit.js";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -366,6 +367,12 @@ export default async function handler(req, res) {
 
   if (req.headers["x-app-secret"] !== process.env.APP_SHARED_SECRET) {
     return res.status(401).json({ error: "unauthorized" });
+  }
+
+  // LAUNCH-ROADMAP.md Stage 3: basic per-device cost/abuse safety net.
+  const rateLimit = await checkRateLimit(req.headers["x-device-id"]);
+  if (!rateLimit.allowed) {
+    return res.status(429).json({ error: "rate limit exceeded", limit: rateLimit.limit });
   }
 
   const {

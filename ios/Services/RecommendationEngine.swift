@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// Talks to two things:
 /// 1. Google Books API — free, no key needed for basic search — for real book metadata.
@@ -12,6 +13,20 @@ struct RecommendationEngine {
     // fine to hardcode here since it's only an abuse guard, not real auth (see CLAUDE.md).
     private let baseURL = URL(string: "https://dogear-teal.vercel.app/api")!
     private let sharedSecret = "dogear12345"
+
+    /// LAUNCH-ROADMAP.md Stage 3: per-device cost/abuse safety net. Sent as
+    /// `X-Device-ID` on every backend call so the server can rate-limit per
+    /// install rather than only checking the one shared app-wide secret,
+    /// which can't tell one install apart from another. `identifierForVendor`
+    /// is Apple's standard per-install identifier — stable across launches,
+    /// resets only on a full delete+reinstall (of every app from this
+    /// vendor), no extra permission prompt. This is an abuse-prevention
+    /// signal, not user tracking — nothing else reads or stores this value.
+    /// The `?? "unknown"` fallback covers the rare case where the OS hasn't
+    /// assigned one yet (e.g. immediately post-boot, before first unlock) —
+    /// the backend still rate-limits those requests, just via one shared
+    /// bucket instead of a per-device one (see `backend/lib/rateLimit.js`).
+    private let deviceID: String = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
 
     /// No explicit timeout here previously meant relying on `URLSession.shared`'s
     /// default (`timeoutIntervalForRequest`, nominally 60s) — which on-device
@@ -27,6 +42,7 @@ struct RecommendationEngine {
         request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(sharedSecret, forHTTPHeaderField: "X-App-Secret")
+        request.setValue(deviceID, forHTTPHeaderField: "X-Device-ID")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         return request
     }
