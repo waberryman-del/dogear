@@ -19,6 +19,10 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
     @Published private(set) var hasAttemptedTodayLoad = false
     @Published var onboardingGenres: Set<Genre> = []   // set once, during onboarding
     @Published private(set) var hasCompletedOnboarding: Bool
+    /// Decision #43(a): whether the one-time fold-gesture discoverability
+    /// hint has ever been shown — same persisted-once-ever pattern as
+    /// `hasCompletedOnboarding`, never re-shown after.
+    @Published private(set) var hasSeenFoldHint: Bool
 
     /// Decision #29: optional first name for Today's greeting, set from
     /// Profile settings. Plain text, no validation. Stopgap until real
@@ -66,6 +70,7 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
     private let defaults = UserDefaults.standard
     private let entriesKey = "dogear.entries"
     private let hasOnboardedKey = "dogear.hasCompletedOnboarding"
+    private let hasSeenFoldHintKey = "dogear.hasSeenFoldHint"
     private let onboardingGenresKey = "dogear.onboardingGenres"
     private let readerNameKey = "dogear.readerName"
     private let shownBooksKey = "dogear.shownBooks"
@@ -100,6 +105,7 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
             entries = decoded
         }
         hasCompletedOnboarding = defaults.bool(forKey: hasOnboardedKey)
+        hasSeenFoldHint = defaults.bool(forKey: hasSeenFoldHintKey)
         if let saved = defaults.array(forKey: onboardingGenresKey) as? [String] {
             onboardingGenres = Set(saved.compactMap(Genre.init(rawValue:)))
         }
@@ -149,6 +155,19 @@ final class LibraryStore: NSObject, ObservableObject, UNUserNotificationCenterDe
         defaults.set(true, forKey: hasOnboardedKey)
         hasCompletedOnboarding = true
         await performRefresh(blocking: true)   // seeds the very first shelf from genres alone
+    }
+
+    /// Decision #43(a): called the moment the hint is actually displayed,
+    /// not just on explicit dismiss — "shown once ever" means the one
+    /// display is what counts, not whether the reader tapped to close it.
+    /// The caller keeps its own local state for whether to keep rendering
+    /// it within the current view session, decoupled from this — otherwise
+    /// this `@Published` flipping true would remove the hint from the view
+    /// hierarchy the instant it appeared, before the reader could read it.
+    func markFoldHintSeen() {
+        guard !hasSeenFoldHint else { return }
+        defaults.set(true, forKey: hasSeenFoldHintKey)
+        hasSeenFoldHint = true
     }
 
     /// Decision #29: no validation — a blank name just means the greeting

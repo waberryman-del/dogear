@@ -285,8 +285,19 @@ struct BookDetailView: View {
         if let entry {
             switch entry.status {
             case .wantToRead:
-                DogearButton(title: "Start reading") {
-                    library.startReading(book.id)
+                // Decision #43(b): `library.removeFromShelf` already existed
+                // (persists, cancels any scheduled midpoint notification)
+                // but had zero call sites anywhere in the app — this was a
+                // missing UI wire-up, not a data-layer gap. Rust tint per
+                // `DogearButton`'s own doc comment, which already names this
+                // exact action as the canonical destructive/undo example.
+                VStack(spacing: DogearSpacing.space3) {
+                    DogearButton(title: "Start reading") {
+                        library.startReading(book.id)
+                    }
+                    DogearButton(title: "Remove from shelf", tint: DogearColor.rust) {
+                        library.removeFromShelf(book.id)
+                    }
                 }
             case .reading:
                 VStack(spacing: DogearSpacing.space3) {

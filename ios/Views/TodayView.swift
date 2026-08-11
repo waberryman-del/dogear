@@ -21,12 +21,21 @@ struct TodayView: View {
     @EnvironmentObject var library: LibraryStore
     @State private var selectedRecommendation: Recommendation?
     @State private var selectedShelfEntry: LibraryEntry?
+    /// Decision #43(a): local, session-only visibility for the fold-gesture
+    /// hint — deliberately decoupled from `library.hasSeenFoldHint`, which
+    /// flips to `true` (and is persisted) the moment this becomes visible.
+    /// If this read that published flag directly instead, the hint would
+    /// vanish the instant it appeared, before the reader could read it.
+    @State private var showFoldHint = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: DogearSpacing.space8) {
                     header
+                    if showFoldHint {
+                        FoldHintBanner { showFoldHint = false }
+                    }
                     // Decision #5: surfaced here regardless of how the reader
                     // got to Today — a tapped notification or just a normal
                     // app open after the check-in date passed both land on
@@ -56,6 +65,11 @@ struct TodayView: View {
             .background(DogearColor.paper)
             .toolbar(.hidden, for: .navigationBar)
             .task { await library.loadTodaysPicksIfNeeded() }
+            .onAppear {
+                guard !library.hasSeenFoldHint else { return }
+                showFoldHint = true
+                library.markFoldHintSeen()
+            }
             .sheet(item: $selectedRecommendation) { rec in
                 BookDetailView(book: rec.book, reason: rec.reason)
                     .environmentObject(library)

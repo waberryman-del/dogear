@@ -45,6 +45,7 @@
 		E203F5071763E42AC89F6B74 /* PlayfairDisplay-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B588E6FAD31F602D9D2D5689 /* PlayfairDisplay-Bold.ttf */; };
 		EBA1C2763C11F1E69399CAD2 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7BC39D37531D2113D941A0 /* SearchView.swift */; };
 		F0D4DF8300B9B5A0CF689C3A /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 243960A89975D69EADC0AD8A /* Haptics.swift */; };
+		BA534089857140D17E3E89AD /* FoldHintBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7116300D2F1091AC020F7D01 /* FoldHintBanner.swift */; };
 		F2D9B3F7964F3E3ABAC6A4B6 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = F647FD8AA8FB7BF21F6B4E47 /* Typography.swift */; };
 		FD36DBDF1D78A02B4BBA6532 /* Inter-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 2DF207C7CD84B4A0FC521840 /* Inter-Medium.ttf */; };
 		FFE1209072A046D943853A12 /* OtherViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C773F1E1E925E5A15625A1FA /* OtherViews.swift */; };
@@ -57,6 +58,7 @@
 		1D4CE24CB190703A2597D2EE /* BookCoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCoverView.swift; sourceTree = "<group>"; };
 		21E2C7C1C2BF4B577E773EFB /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		243960A89975D69EADC0AD8A /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		7116300D2F1091AC020F7D01 /* FoldHintBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoldHintBanner.swift; sourceTree = "<group>"; };
 		2497FF2C26F550143C1F1F38 /* Color+Dogear.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Dogear.swift"; sourceTree = "<group>"; };
 		27688110D9A7D53ED3D500CF /* MidpointCheckInCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MidpointCheckInCard.swift; sourceTree = "<group>"; };
 		2B081C5766302DCB70740F14 /* VibeSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VibeSearchView.swift; sourceTree = "<group>"; };
@@ -165,6 +167,7 @@
 				9CE7A8A96102D4170C3FFA74 /* DailyPickCard.swift */,
 				A4B2B8ADE8BAB132AEE6AB8A /* DogearButton.swift */,
 				3AA3C2B3FCF9D998576CAF09 /* DogearChip.swift */,
+				7116300D2F1091AC020F7D01 /* FoldHintBanner.swift */,
 				D644A147FCC71CC5607C8660 /* HeroReadingCard.swift */,
 				27688110D9A7D53ED3D500CF /* MidpointCheckInCard.swift */,
 				9B22962813AF30BE67878732 /* ReadingProgressSheet.swift */,
@@ -321,6 +324,7 @@
 				E1CC8ED3BDEC5EBF40F22F7D /* DogearApp.swift in Sources */,
 				6BE93F21AD3CAAAAD641295C /* DogearButton.swift in Sources */,
 				407E6592C9286CBAD23CEF2B /* DogearChip.swift in Sources */,
+				BA534089857140D17E3E89AD /* FoldHintBanner.swift in Sources */,
 				F0D4DF8300B9B5A0CF689C3A /* Haptics.swift in Sources */,
 				1662CDEAE4E315CAED701BDF /* HeroReadingCard.swift in Sources */,
 				72F4086F52113856D4DA9D33 /* LibraryStore.swift in Sources */,
