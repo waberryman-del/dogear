@@ -183,6 +183,12 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
    how the reader felt. Never add a 1-5 or thumbs mechanism back in.
 3. **Archive is organized by the three shelves**, not a flat grid of every book. Within
    each shelf, books still render as spines (visual language from `prototype.html`).
+   **[Renamed after real-device review]** The third shelf's display label is
+   "Wasn't For Me," not "Should've Stopped" — the original wording read as
+   self-judgment about a past choice rather than an honest assessment of
+   the book. The underlying Swift enum case (`shouldveStopped`) is
+   unchanged — this is a display-text change only, not a data model
+   change.
 4. **[AMENDED after on-device testing] Recommendation refresh is earned, not
    scheduled.** New picks generate automatically whenever a book is placed on
    a shelf. There is no daily timer and no manual "ring the bell" control —
@@ -314,7 +320,7 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
     Display for headlines paired with Inter for body/UI text, and — notably —
     **color-coded shelf spines matching decision #2/#3's three shelves**
     (deep green for "keep forever," warm tan for "glad I read it," oxblood/rust
-    for "should've stopped"), which is a more concrete execution of that
+    for "wasn't for me"), which is a more concrete execution of that
     decision than anything specified in text so far. It also shows a fully
     designed 5-tab bar (Home / Discover / Ask Dogear / Library / Profile) —
     this is a real, considered answer to the tab-navigation question — and it's now
@@ -367,7 +373,7 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
     work as separate calls in the existing code — confirm this holds,
     don't introduce new auto-start behavior anywhere.)
 27. **"Not interested" is a real but moderate negative signal** — not as
-    strong as "should've stopped" on a finished book (that's a book you
+    strong as "wasn't for me" on a finished book (that's a book you
     actually read and regretted; this is a book you declined without
     reading), but a definite, real push away from that pattern in future
     recommendations, not a no-memory soft dismiss. Track it distinctly
@@ -396,7 +402,7 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
     Read** (the same list Today's "Up Next" already previews under the hero
     card — one underlying data source, two places it's shown), then the
     three finished-book shelves per decision #3: **Keep Forever**, **Glad I
-    Read It**, **Should've Stopped**. This finally gives want-to-read/
+    Read It**, **Wasn't For Me**. This finally gives want-to-read/
     currently-reading books — which don't have a `shelfPlacement` and never
     belonged in the three finished shelves — an honest home.
 31. **[Stage 1 spec — planned, NOT yet built] Book detail page — core
@@ -696,8 +702,8 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       subsequent app opens — this may just be a misunderstanding to rule
       out, or a real regression to fix, don't assume either way.
     - **(b) Shelf tab unification.** All five categories — Currently
-      Reading, Want to Read, Keep Forever, Glad I Read It, Should've
-      Stopped — become tappable shelf tiles showing a book count each,
+      Reading, Want to Read, Keep Forever, Glad I Read It, Wasn't For
+      Me — become tappable shelf tiles showing a book count each,
       drilled into to see the actual book list, replacing the current
       single long inline-sections layout (decision 30's content is
       unchanged, just the navigation pattern). Same rule as above: build
@@ -742,7 +748,7 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
    discovery rows (the taste-anchored + discovery row model from decision 19/20,
    relocated here from Today).
 4. **Find (Vibe Search)** — free-text mood/vibe search (decisions 10, 13, 14).
-5. **Shelf** — three shelves (keep forever / glad I read it / should've stopped),
+5. **Shelf** — three shelves (keep forever / glad I read it / wasn't for me),
    each a row of spines. Tap a spine → detail sheet with the AI "why you liked it"
    note + any highlights.
 6. **Profile** (decision 28) — basic reading stats + app settings. Intentionally
