@@ -41,6 +41,14 @@ struct BookDetailView: View {
         library.entries.first { $0.book.id == book.id }
     }
 
+    /// Explicit `(() -> Void)?`, same reasoning as `DailyPickCard`'s
+    /// `onFold` — an inline ternary between a closure literal and bare
+    /// `nil` doesn't type-check cleanly.
+    private var onCoverFold: (() -> Void)? {
+        guard entry == nil else { return nil }
+        return { library.addToShelf(book, status: .wantToRead, reason: reason) }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -95,9 +103,16 @@ struct BookDetailView: View {
 
     private var identitySection: some View {
         HStack(alignment: .top, spacing: DogearSpacing.space4) {
+            // Phase 4 Stage 4 (decision #6): same fold-to-save fast path as
+            // the cards that lead here, offered only when `entry == nil` —
+            // exactly the condition `actionsSection` already uses to show
+            // the "Want to read" button below, so the gesture and the
+            // button are never out of sync about whether this book is
+            // already on the shelf.
             BookCoverView(
                 url: book.coverURL, title: book.title, author: book.author,
-                width: 100, height: 150, displayMode: .aspectFit
+                width: 100, height: 150, displayMode: .aspectFit,
+                onFold: onCoverFold
             )
             VStack(alignment: .leading, spacing: 4) {
                 Text(book.title)

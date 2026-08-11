@@ -8,6 +8,10 @@ import SwiftUI
 struct RecommendationGrid: View {
     let recommendations: [Recommendation]
     let onSelect: (Recommendation) -> Void
+    /// Phase 4 Stage 4 (decision #6): fires when a card's fold gesture
+    /// commits — the caller's save action (`addToShelf`), same as tapping
+    /// into the detail sheet and using its "Want to read" button would do.
+    let onFold: (Recommendation) -> Void
 
     private let columns = [GridItem(.adaptive(minimum: 104), spacing: DogearSpacing.space4)]
 
@@ -17,7 +21,7 @@ struct RecommendationGrid: View {
                 Button {
                     onSelect(rec)
                 } label: {
-                    RecommendationCard(rec: rec)
+                    RecommendationCard(rec: rec, onTap: { onSelect(rec) }, onFold: { onFold(rec) })
                 }
                 .buttonStyle(DogearPressStyle())
             }

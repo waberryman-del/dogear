@@ -5,20 +5,40 @@ import SwiftUI
 /// (decisions #26/#27). Once decided, shows what was decided instead of the
 /// buttons rather than disappearing — decision #24 clears the whole
 /// daily-picks section only once ALL 3 are decided, not per-card.
+///
+/// Phase 4 Stage 4 (decision #6): the cover carries its own press-and-hold
+/// fold gesture as a fast path to "want to read," additive alongside the
+/// explicit decision buttons below — never offered once a decision's
+/// already been made, since there's no undo UI for that here. The cover is
+/// no longer inside the same `Button` as the title/author/reason text: it
+/// owns its own touches once `onFold` is set (see `BookCoverView`), so the
+/// text keeps its own `Button` for `onSelect` instead.
 struct DailyPickCard: View {
     let recommendation: Recommendation
     let decision: DailyPickDecision?
     let onSelect: () -> Void
     let onDecide: (DailyPickDecision) -> Void
 
+    /// Explicit `(() -> Void)?` (rather than an inline ternary with a
+    /// closure literal on one side and bare `nil` on the other, which Swift
+    /// fails to type-check without an annotation like this) — nil once a
+    /// decision's already been made, so the gesture disappears alongside
+    /// the buttons it mirrors.
+    private var onFold: (() -> Void)? {
+        guard decision == nil else { return nil }
+        return { onDecide(.wantToRead) }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DogearSpacing.space3) {
-            Button(action: onSelect) {
-                HStack(alignment: .top, spacing: DogearSpacing.space4) {
-                    BookCoverView(
-                        url: recommendation.book.coverURL, title: recommendation.book.title,
-                        author: recommendation.book.author, width: 72, height: 104, displayMode: .aspectFit
-                    )
+            HStack(alignment: .top, spacing: DogearSpacing.space4) {
+                BookCoverView(
+                    url: recommendation.book.coverURL, title: recommendation.book.title,
+                    author: recommendation.book.author, width: 72, height: 104, displayMode: .aspectFit,
+                    onTap: onSelect,
+                    onFold: onFold
+                )
+                Button(action: onSelect) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(recommendation.book.title)
                             .font(DogearType.rowLabelItalic)
@@ -31,10 +51,10 @@ struct DailyPickCard: View {
                             .foregroundStyle(DogearColor.ink)
                             .padding(.top, 2)
                     }
-                    Spacer()
                 }
+                .buttonStyle(DogearPressStyle())
+                Spacer()
             }
-            .buttonStyle(DogearPressStyle())
 
             if let decision {
                 decidedBadge(for: decision)

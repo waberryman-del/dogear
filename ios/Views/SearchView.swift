@@ -113,7 +113,11 @@ struct SearchView: View {
                         selectedBook = book
                     } label: {
                         VStack(alignment: .leading, spacing: 6) {
-                            BookCoverView(url: book.coverURL, title: book.title, width: 104, height: 150)
+                            BookCoverView(
+                                url: book.coverURL, title: book.title, width: 104, height: 150,
+                                onTap: { selectedBook = book },
+                                onFold: { library.addToShelf(book, status: .wantToRead, reason: nil) }
+                            )
                             Text(book.title)
                                 .font(.caption.bold())
                                 .foregroundStyle(DogearColor.ink)
@@ -150,9 +154,11 @@ struct SearchView: View {
         } else {
             VStack(alignment: .leading, spacing: DogearSpacing.space6) {
                 ForEach(library.recommendationRows) { row in
-                    RecommendationRowView(row: row) { rec in
-                        selectedRecommendation = rec
-                    }
+                    RecommendationRowView(
+                        row: row,
+                        onSelect: { rec in selectedRecommendation = rec },
+                        onFold: { rec in library.addToShelf(rec.book, status: .wantToRead, reason: rec.reason) }
+                    )
                 }
             }
         }

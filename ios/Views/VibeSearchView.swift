@@ -292,9 +292,11 @@ struct VibeSearchView: View {
     }
 
     private var resultsGrid: some View {
-        RecommendationGrid(recommendations: results) { rec in
-            selectedResult = rec
-        }
+        RecommendationGrid(
+            recommendations: results,
+            onSelect: { rec in selectedResult = rec },
+            onFold: { rec in library.addToShelf(rec.book, status: .wantToRead, reason: rec.reason) }
+        )
     }
 
     private var refinementRow: some View {

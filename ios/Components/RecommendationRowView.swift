@@ -12,6 +12,9 @@ import SwiftUI
 struct RecommendationRowView: View {
     let row: RecommendationRow
     let onSelect: (Recommendation) -> Void
+    /// Phase 4 Stage 4 (decision #6) — see `RecommendationGrid`'s matching
+    /// param; this row and that grid share `RecommendationCard`.
+    let onFold: (Recommendation) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: DogearSpacing.space3) {
@@ -22,7 +25,7 @@ struct RecommendationRowView: View {
                         Button {
                             onSelect(rec)
                         } label: {
-                            RecommendationCard(rec: rec)
+                            RecommendationCard(rec: rec, onTap: { onSelect(rec) }, onFold: { onFold(rec) })
                         }
                         .buttonStyle(DogearPressStyle())
                     }
