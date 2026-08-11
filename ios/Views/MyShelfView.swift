@@ -8,10 +8,10 @@ import SwiftUI
 /// navigation pattern is new.
 ///
 /// Phase 4 Stage 3: the three finished/judged shelves (Keep Forever, Glad I
-/// Read It, Should've Stopped) now render as brand-board-matched shelf art
+/// Read It, Wasn't For Me) now render as brand-board-matched shelf art
 /// (`shelfArtRow`) instead of plain count tiles — the board only color-codes
 /// these three, not Currently Reading / Want to Read, which stay as the
-/// original plain tiles. Vertical order (Keep Forever top, Should've Stopped
+/// original plain tiles. Vertical order (Keep Forever top, Wasn't For Me
 /// bottom) comes directly from the board's "My Shelf" mockup.
 ///
 /// Wrapped in a `NavigationStack` by `RootTabView`, not here — this view
@@ -29,7 +29,7 @@ struct MyShelfView: View {
             case .wantToRead: return "Want to Read"
             case .keepForever: return "Keep Forever"
             case .gladIReadIt: return "Glad I Read It"
-            case .shouldveStopped: return "Should've Stopped"
+            case .shouldveStopped: return "Wasn't For Me"
             }
         }
 

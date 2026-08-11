@@ -316,7 +316,7 @@ struct BookDetailView: View {
         switch placement {
         case .keepForever: return "Keep forever"
         case .gladIReadIt: return "Glad I read it"
-        case .shouldveStopped: return "Should've stopped"
+        case .shouldveStopped: return "Wasn't for me"
         }
     }
 }
