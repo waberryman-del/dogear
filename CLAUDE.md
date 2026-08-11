@@ -720,6 +720,21 @@ shelfPlacement, AI-generated "why you liked it" note, midpointCheckIn, highlight
       switch) are already implemented from the prior round — not new work,
       but included in this same round's final real-device verification
       pass rather than a separate one.
+43. **[Fold gesture discoverability + a real bug found on real-device
+    testing]**
+    - **(a) The fold-to-save gesture (decision 6, built in Phase 4 Stage
+      4) has no discoverability.** It feels good but nothing hints it
+      exists. Add a brief, one-time hint the first time a reader sees a
+      book cover — "Press and hold a cover to save it" or similar,
+      dismissible, shown once ever (persisted flag, same pattern as other
+      one-time UI state in this app), never shown again after that first
+      appearance or dismissal.
+    - **(b) Real bug: no way to remove a book from Want to Read.**
+      Opening a book's detail page from the Want to Read shelf shows no
+      "remove" action. Every other shelf/status has a clear next action
+      (start reading, finish + place on shelf, re-place) — Want to Read
+      is missing its own removal path. Add one, consistent with how
+      other shelf actions are presented on the detail page.
 
 ## Design identity
 - **Palette**: unchanged from the earlier prototype and still the right call — deep
