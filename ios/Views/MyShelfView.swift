@@ -5,8 +5,14 @@ import SwiftUI
 /// showing a book count and drilling into the actual book list on tap. This
 /// replaces the previous single long inline-sections layout; the underlying
 /// categories, counts, and filters are decision #30's, unchanged — only the
-/// navigation pattern is new. Current design tokens only; the brand board's
-/// exact shelf art (decision #23) is still Phase 4.
+/// navigation pattern is new.
+///
+/// Phase 4 Stage 3: the three finished/judged shelves (Keep Forever, Glad I
+/// Read It, Should've Stopped) now render as brand-board-matched shelf art
+/// (`shelfArtRow`) instead of plain count tiles — the board only color-codes
+/// these three, not Currently Reading / Want to Read, which stay as the
+/// original plain tiles. Vertical order (Keep Forever top, Should've Stopped
+/// bottom) comes directly from the board's "My Shelf" mockup.
 ///
 /// Wrapped in a `NavigationStack` by `RootTabView`, not here — this view
 /// only ever needs to attach `.navigationDestination`, not own the stack.
@@ -26,21 +32,46 @@ struct MyShelfView: View {
             case .shouldveStopped: return "Should've Stopped"
             }
         }
+
+        /// Phase 4 Stage 3 background art, brand board-matched — only the
+        /// three finished shelves have art; the other two stay `nil` and
+        /// render as plain tiles.
+        var shelfArtAssetName: String? {
+            switch self {
+            case .currentlyReading, .wantToRead: return nil
+            case .keepForever: return "ShelfKeepForever"
+            case .gladIReadIt: return "ShelfGladIReadIt"
+            case .shouldveStopped: return "ShelfShouldveStopped"
+            }
+        }
     }
 
     private let columns = [GridItem(.flexible()), GridItem(.flexible())]
+    private let plainTiles: [Category] = [.currentlyReading, .wantToRead]
+    private let finishedShelves: [Category] = [.keepForever, .gladIReadIt, .shouldveStopped]
 
     var body: some View {
         ScrollView {
             if library.entries.isEmpty {
                 emptyState
             } else {
-                LazyVGrid(columns: columns, spacing: DogearSpacing.space4) {
-                    ForEach(Category.allCases) { category in
-                        NavigationLink(value: category) {
-                            tile(category)
+                VStack(spacing: DogearSpacing.space5) {
+                    LazyVGrid(columns: columns, spacing: DogearSpacing.space4) {
+                        ForEach(plainTiles) { category in
+                            NavigationLink(value: category) {
+                                tile(category)
+                            }
+                            .buttonStyle(DogearPressStyle())
                         }
-                        .buttonStyle(DogearPressStyle())
+                    }
+
+                    VStack(spacing: DogearSpacing.space4) {
+                        ForEach(finishedShelves) { category in
+                            NavigationLink(value: category) {
+                                shelfArtRow(category)
+                            }
+                            .buttonStyle(DogearPressStyle())
+                        }
                     }
                 }
                 .padding(.horizontal, DogearSpacing.space5)
@@ -67,6 +98,45 @@ struct MyShelfView: View {
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
         .padding(DogearSpacing.space4)
         .background(DogearColor.linen)
+        .clipShape(RoundedRectangle(cornerRadius: DogearRadius.card))
+    }
+
+    /// Photoreal shelf background (Phase 4 Stage 3 asset, generated to match
+    /// `docs/brand-board.png`'s "BOOK SHELF COLORS" treatment) with title and
+    /// count overlaid on a top-anchored scrim — never placed directly on the
+    /// photo, since local brightness/busyness in the art varies book to book
+    /// and plain text on top of it isn't reliably legible.
+    private func shelfArtRow(_ category: Category) -> some View {
+        let rowHeight: CGFloat = 132
+        return ZStack(alignment: .topLeading) {
+            if let assetName = category.shelfArtAssetName {
+                Image(assetName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(height: rowHeight)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+            }
+
+            LinearGradient(
+                colors: [.black.opacity(0.62), .black.opacity(0.22), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: rowHeight)
+
+            VStack(alignment: .leading, spacing: DogearSpacing.space1) {
+                Text(category.title)
+                    .font(DogearType.rowLabel)
+                    .foregroundStyle(.white)
+                Text("\(count(for: category)) books")
+                    .font(DogearType.caption).tracking(1.2)
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+            .padding(DogearSpacing.space4)
+        }
+        .frame(height: rowHeight)
+        .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: DogearRadius.card))
     }
 
